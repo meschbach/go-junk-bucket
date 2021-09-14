@@ -3,3 +3,6 @@ pump: bin
 
 bin:
 	mkdir -p bin
+
+clean:
+	rm -fR bin
