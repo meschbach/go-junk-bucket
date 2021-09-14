@@ -1,3 +1,3 @@
-module github.com/meschbach/go-junk
+module github.com/meschbach/go-junk-bucket
 
 go 1.16
