@@ -6,13 +6,13 @@ import (
 )
 
 type Subcommand struct {
-	programName string
+	programName      string
 	programArguments []string
 }
 
 func NewSubcommand(programName string, args []string) *Subcommand {
 	return &Subcommand{
-		programName: programName,
+		programName:      programName,
 		programArguments: args,
 	}
 }
@@ -23,7 +23,7 @@ func (s *Subcommand) Run(stdout chan<- string, stderr chan<- string) error {
 	if err != nil {
 		return err
 	}
-	if err := stdin.Close() ; err != nil {
+	if err := stdin.Close(); err != nil {
 		return err
 	}
 

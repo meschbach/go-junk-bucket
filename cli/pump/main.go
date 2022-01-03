@@ -7,7 +7,7 @@ import (
 	"sync"
 )
 
-func main()  {
+func main() {
 	args := os.Args
 	if len(args) < 2 {
 		if _, err := fmt.Fprintf(os.Stderr, "Usage requires the following format: <program> [<args>]+\n"); err != nil {
@@ -31,10 +31,10 @@ func main()  {
 	stdout := buildPump("<<stdout>>")
 	stderr := buildPump("<<stderr>>")
 
-	if err := cmd.Run(stdout,stderr); err != nil {
+	if err := cmd.Run(stdout, stderr); err != nil {
 		panic(err)
 	}
-	for _, pipe := range toClose{
+	for _, pipe := range toClose {
 		close(pipe)
 	}
 	pumpsDone.Wait()

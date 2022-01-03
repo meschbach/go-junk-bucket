@@ -5,10 +5,10 @@ import (
 	"sync"
 )
 
-func PumpPrefixedChannel(prefix string, source <-chan string, onDone *sync.WaitGroup)  {
+func PumpPrefixedChannel(prefix string, source <-chan string, onDone *sync.WaitGroup) {
 	defer onDone.Done()
 	for {
-		line, ok := <- source
+		line, ok := <-source
 		if !ok {
 			return
 		}
