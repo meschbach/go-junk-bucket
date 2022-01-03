@@ -5,9 +5,14 @@ import (
 	"sync"
 )
 
+type Option interface {
+	Customize(cmd *exec.Cmd)
+}
+
 type Subcommand struct {
 	programName      string
 	programArguments []string
+	Options []Option
 }
 
 func NewSubcommand(programName string, args []string) *Subcommand {
@@ -17,8 +22,16 @@ func NewSubcommand(programName string, args []string) *Subcommand {
 	}
 }
 
+func (s *Subcommand) WithOption(opt Option)  {
+	s.Options = append(s.Options, opt)
+}
+
 func (s *Subcommand) Run(stdout chan<- string, stderr chan<- string) error {
 	cmd := exec.Command(s.programName, s.programArguments...)
+	for _, option := range s.Options {
+		option.Customize(cmd)
+	}
+
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return err
