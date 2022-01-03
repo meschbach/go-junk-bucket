@@ -18,11 +18,11 @@ func (s *Subcommand) PumpToStandard(title string) error {
 		return pipe
 	}
 
-	defer func() {
+	cleanUp := func() {
 		for _, pipe := range toClose {
 			close(pipe)
 		}
-	}()
+	}
 
 	stdoutName := fmt.Sprintf("<<%s.stdout>>", title)
 	stdout := buildPump(stdoutName)
@@ -31,8 +31,10 @@ func (s *Subcommand) PumpToStandard(title string) error {
 	stderr := buildPump(stderrName)
 
 	if err := s.Run(stdout, stderr); err != nil {
+		cleanUp()
 		return err
 	}
+	cleanUp()
 	pumpsDone.Wait()
 	return nil
 }
