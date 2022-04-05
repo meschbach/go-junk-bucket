@@ -7,7 +7,8 @@ import (
 )
 
 type LocalMailbox struct {
-	mailbox chan any
+	mailbox     chan any
+	doneChannel chan interface{}
 }
 
 func (l *LocalMailbox) Tell(m any) {
@@ -30,6 +31,14 @@ func (l *LocalMailbox) Receive() any {
 	return <-l.mailbox
 }
 
+func (l *LocalMailbox) Done() chan interface{} {
+	return l.doneChannel
+}
+
+func (l *LocalMailbox) Close() {
+	close(l.doneChannel)
+}
+
 func (l *LocalActorSystem) ExternalMailbox() *LocalMailbox {
-	return &LocalMailbox{mailbox: make(chan any, 16)}
+	return &LocalMailbox{mailbox: make(chan any, 16), doneChannel: make(chan interface{})}
 }
