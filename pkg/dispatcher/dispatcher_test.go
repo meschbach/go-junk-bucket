@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestDispatcherNothing(t *testing.T) {
+func TestDispatcherNothingNoError(t *testing.T) {
 	t.Parallel()
 
 	d := NewDispatcher[string]()

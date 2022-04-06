@@ -1,4 +1,4 @@
-package actors
+package panic_test
 
 import (
 	"github.com/stretchr/testify/assert"

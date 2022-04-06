@@ -38,7 +38,3 @@ func (l *LocalMailbox) Done() chan interface{} {
 func (l *LocalMailbox) Close() {
 	close(l.doneChannel)
 }
-
-func (l *LocalActorSystem) ExternalMailbox() *LocalMailbox {
-	return &LocalMailbox{mailbox: make(chan any, 16), doneChannel: make(chan interface{})}
-}

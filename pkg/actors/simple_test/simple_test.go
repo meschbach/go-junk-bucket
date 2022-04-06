@@ -1,6 +1,8 @@
-package actors
+package simple_test
 
 import (
+	"github.com/meschbach/go-junk-bucket/pkg/actors"
+	"github.com/meschbach/go-junk-bucket/pkg/actors/local"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
@@ -11,7 +13,7 @@ type CounterActor struct {
 }
 
 type Tell struct {
-	mailbox *LocalMailbox
+	mailbox *local.LocalMailbox
 }
 
 func (c *CounterActor) OnMessage(m any) {
@@ -20,6 +22,7 @@ func (c *CounterActor) OnMessage(m any) {
 		msg.mailbox.Tell(c.count)
 	case *Tell:
 		msg.mailbox.Tell(c.count)
+	case actors.SelfStarted:
 	default:
 		c.count++
 	}
@@ -28,7 +31,7 @@ func (c *CounterActor) OnMessage(m any) {
 func TestSimpleAck(t *testing.T) {
 	t.Parallel()
 
-	sys := NewLocalActorSystem()
+	sys := local.NewLocalActorSystem()
 	counter := &CounterActor{count: 0}
 	ref := sys.Spawn("test", counter)
 	ref.Tell(nil)
@@ -40,7 +43,7 @@ func TestSimpleAck(t *testing.T) {
 func TestMultipleAcksSync(t *testing.T) {
 	t.Parallel()
 
-	sys := NewLocalActorSystem()
+	sys := local.NewLocalActorSystem()
 	externalMailbox := sys.ExternalMailbox()
 	ref := sys.Spawn("test", &CounterActor{count: 0})
 	ref.Tell(1)
