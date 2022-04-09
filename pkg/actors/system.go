@@ -5,6 +5,7 @@ type MessageActor interface {
 }
 
 type Runtime interface {
+	Self() Pid
 	Tell(p Pid, m any)
 }
 

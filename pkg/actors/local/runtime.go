@@ -19,6 +19,18 @@ func (r *runtime) start() {
 
 func (r *runtime) run() {
 	for m := range r.mailbox {
-		r.consumer.OnMessage(r.system, m)
+		r.consumer.OnMessage(&container{r}, m)
 	}
+}
+
+type container struct {
+	r *runtime
+}
+
+func (d *container) Self() actors.Pid {
+	return d.r.self
+}
+
+func (d *container) Tell(p actors.Pid, m any) {
+	d.r.system.Tell(p, m)
 }
