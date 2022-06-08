@@ -105,12 +105,14 @@ func (r *runtime) tick(signal tracedDecorator) {
 				span.SetStatus(codes.Error, e.Error())
 			}
 
-			logger := &consoleLogger{who: r.self}
-			//TODO: breaking encapsulation a little here
-			trace := debug.Stack()
+			//TODO: this operation might fault
 			nameParts := r.namedParts()
+			span.SetAttributes(attribute.StringSlice("name", nameParts))
 			name := "/" + strings.Join(nameParts, "/")
-			logger.write("panic", "%s -- %#v\n%s", []any{name, problem, trace})
+
+			logger := r.system.loggingStrategy.buildLogger(tickContext, r.self)
+			stackTrace := debug.Stack()
+			logger.Error("actor panic: %s -- %#v\n%s", name, problem, stackTrace)
 
 			//notify listeners
 			for _, l := range r.monitoring {

@@ -87,8 +87,8 @@ func (p *port) Tell(ctx context.Context, who actors.Pid, what any) {
 	p.theater.Tell(portContext, who, what)
 }
 
-func (p *port) Log() actors.Logger {
-	return &consoleLogger{who: p.self}
+func (p *port) Log(ctx context.Context) actors.Logger {
+	return p.theater.loggingStrategy.buildLogger(ctx, p.self)
 }
 
 func (p *port) Close(ctx context.Context) {

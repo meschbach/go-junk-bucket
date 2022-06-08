@@ -12,6 +12,6 @@ type Port interface {
 	ReceiveTimeout(wait time.Duration) (any, error)
 	ReceiveWith(ctx context.Context) (any, error)
 	Tell(ctx context.Context, who Pid, what any)
-	Log() Logger
+	Log(ctx context.Context) Logger
 	Close(ctx context.Context)
 }

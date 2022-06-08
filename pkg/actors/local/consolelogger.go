@@ -27,3 +27,7 @@ func (c *consoleLogger) Fatal(format string, args ...any) {
 	problem := fmt.Sprintf(format, args...)
 	panic(problem)
 }
+
+func (c *consoleLogger) Error(format string, args ...any) {
+	c.write("error", format, args)
+}

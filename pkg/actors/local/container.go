@@ -39,7 +39,7 @@ func (c *container) SpawnMonitor(actor actors.MessageActor) actors.Pid {
 }
 
 func (c *container) Log() actors.Logger {
-	return &consoleLogger{who: c.Self()}
+	return c.r.system.loggingStrategy.buildLogger(c.tickContext, c.r.self)
 }
 
 func (c *container) SpawnMailbox() actors.Port {

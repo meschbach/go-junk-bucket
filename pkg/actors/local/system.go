@@ -17,10 +17,11 @@ type messageTarget interface {
 }
 
 type system struct {
-	nextID    uint64
-	actorLock sync.RWMutex
-	actors    map[actors.Pid]messageTarget
-	root      *runtime
+	nextID          uint64
+	actorLock       sync.RWMutex
+	actors          map[actors.Pid]messageTarget
+	root            *runtime
+	loggingStrategy LoggingStrategy
 }
 
 func (s *system) nextPID() actors.Pid {
@@ -108,11 +109,16 @@ func (s *system) Spawn(context context.Context, a actors.MessageActor, opts ...a
 	return pid
 }
 
-func NewSystem() actors.System {
-	return &system{
-		nextID: 0,
-		actors: make(map[actors.Pid]messageTarget),
+func NewSystem(opts ...SystemOpts) actors.System {
+	out := &system{
+		nextID:          0,
+		actors:          make(map[actors.Pid]messageTarget),
+		loggingStrategy: &CompositeLoggingStrategy{Loggers: []LoggingStrategy{&ConsoleLoggingStrategy{}, &CompositeLoggingStrategy{}}},
 	}
+	for _, opt := range opts {
+		opt.customizeSystem(out)
+	}
+	return out
 }
 
 func (s *system) pid2target(pid actors.Pid) messageTarget {
