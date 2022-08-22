@@ -26,7 +26,8 @@ func newResource(cfg Config) *resource.Resource {
 	//TODO: properly resolve the version and environment
 	r, problem := resource.Merge(
 		resource.Default(),
-		resource.NewSchemaless(
+		resource.NewWithAttributes(
+			"",
 			semconv.ServiceNameKey.String(cfg.ServiceName+"."+envName),
 			semconv.ServiceVersionKey.String("v0.1.0"),
 			attribute.String("environment", envName),
