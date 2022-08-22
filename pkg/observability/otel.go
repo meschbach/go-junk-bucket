@@ -10,7 +10,7 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 	"log"
 	"os"
 )
@@ -26,8 +26,7 @@ func newResource(cfg Config) *resource.Resource {
 	//TODO: properly resolve the version and environment
 	r, problem := resource.Merge(
 		resource.Default(),
-		resource.NewWithAttributes(
-			semconv.SchemaURL,
+		resource.NewSchemaless(
 			semconv.ServiceNameKey.String(cfg.ServiceName+"."+envName),
 			semconv.ServiceVersionKey.String("v0.1.0"),
 			attribute.String("environment", envName),
