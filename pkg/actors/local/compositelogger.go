@@ -22,14 +22,15 @@ func (c *CompositeLogger) Warn(format string, args ...any) {
 }
 
 func (c *CompositeLogger) Fatal(format string, args ...any) {
-	lastIndex := len(c.Loggers) - 1
-	for _, l := range c.Loggers[0 : lastIndex-1] {
-		go func() {
-			defer func() {
-				recover()
-			}()
+	lastIndex := len(c.Loggers)
+	dispatch := func(l actors.Logger) {
+		defer func() {
+			recover()
 		}()
 		l.Fatal(format, args...)
+	}
+	for _, l := range c.Loggers[0 : lastIndex-1] {
+		go dispatch(l)
 	}
 
 	l := c.Loggers[lastIndex]
