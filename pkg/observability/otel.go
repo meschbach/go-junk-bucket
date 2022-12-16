@@ -47,6 +47,9 @@ func environmentFromEnv() string {
 	}
 }
 
+// SetupTracing will configure OTEL using the environment using the given configuration
+// Deprecated: use Config#Start() instead.  This required using a delay in order to ensure all spans were flushed was
+// shutdown correctly.
 func SetupTracing(programContext context.Context, config Config) error {
 	//not sure why this manually needs to be configured
 	otel.SetTextMapPropagator(propagation.TraceContext{})
