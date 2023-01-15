@@ -13,7 +13,7 @@ type Option interface {
 type Subcommand struct {
 	programName      string
 	programArguments []string
-	Options []Option
+	Options          []Option
 }
 
 func NewSubcommand(programName string, args []string) *Subcommand {
@@ -23,11 +23,11 @@ func NewSubcommand(programName string, args []string) *Subcommand {
 	}
 }
 
-func (s *Subcommand) WithOption(opt Option)  {
+func (s *Subcommand) WithOption(opt Option) {
 	s.Options = append(s.Options, opt)
 }
 
-func (s *Subcommand) Interact(stdin <-chan string, stdout chan<- string, stderr chan<- string ) error {
+func (s *Subcommand) Interact(stdin <-chan string, stdout chan<- string, stderr chan<- string) error {
 	var completedReading sync.WaitGroup
 	var readyGate sync.WaitGroup
 
@@ -49,17 +49,25 @@ func (s *Subcommand) Interact(stdin <-chan string, stdout chan<- string, stderr 
 			withNewLine := in + "\n"
 			asBytes := []byte(withNewLine)
 			_, err := stdinPipe.Write(asBytes)
-			if err != nil { panic(err) }
+			if err != nil {
+				panic(err)
+			}
 		}
 		err := stdinPipe.Close()
-		if err != nil { panic(err) }
+		if err != nil {
+			panic(err)
+		}
 		completedReading.Done()
 	}()
 
 	stdoutPipe, err := cmd.StdoutPipe()
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	stderrPipe, err := cmd.StderrPipe()
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	completedReading.Add(1)
 	readyGate.Add(1)
@@ -82,5 +90,5 @@ func (s *Subcommand) Run(stdout chan<- string, stderr chan<- string) error {
 	stdin := make(chan string)
 	close(stdin)
 
-	return s.Interact(stdin,stdout,stderr)
+	return s.Interact(stdin, stdout, stderr)
 }
