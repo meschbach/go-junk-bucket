@@ -6,6 +6,8 @@ import (
 	"syscall"
 )
 
+// ProcGroup is an option to launch a command in a process group.  Provides the capability to send signals to the entire
+// process group, as well as convince wrappers around the group.
 type ProcGroup struct {
 	cmd *exec.Cmd
 }
@@ -18,6 +20,7 @@ func (p *ProcGroup) Customize(cmd *exec.Cmd) {
 	p.cmd = cmd
 }
 
+// Signal dispatches the given signal to the process group
 func (p *ProcGroup) Signal(signal syscall.Signal) error {
 	pgid, err := syscall.Getpgid(p.cmd.Process.Pid)
 	if err != nil {
@@ -26,10 +29,12 @@ func (p *ProcGroup) Signal(signal syscall.Signal) error {
 	return syscall.Kill(-pgid, signal)
 }
 
+// Kill sends the SIGKILL to the group
 func (p *ProcGroup) Kill() error {
 	return p.Signal(unix.SIGKILL)
 }
 
+// Terminate sends SIGTERM to the group
 func (p *ProcGroup) Terminate() error {
 	return p.Signal(unix.SIGTERM)
 }
