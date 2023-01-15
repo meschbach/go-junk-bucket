@@ -96,8 +96,13 @@ func (s *Subcommand) Run(stdout chan<- string, stderr chan<- string) error {
 	return s.Interact(stdin, stdout, stderr)
 }
 
+// Kill attempts to terminate the subcommand by sending an operating system kill signal.
+//
+// NOTE: In the case of process cleanup this risks orphaning processes.  Use `WithProcGroup` option and `Kill` with that
+// instead.
 func (s *Subcommand) Kill() error {
 	if s.activeProcess == nil {
+		fmt.Printf("no active process, ignoring...\n")
 		return nil
 	}
 	return s.activeProcess.Process.Kill()
@@ -105,6 +110,12 @@ func (s *Subcommand) Kill() error {
 
 func (s *Subcommand) SendSignal(signal os.Signal) error {
 	if s.activeProcess == nil {
+		return nil
+	}
+	if s.activeProcess.ProcessState == nil {
+		return nil
+	}
+	if s.activeProcess.ProcessState.Exited() {
 		return nil
 	}
 	return s.activeProcess.Process.Signal(signal)
