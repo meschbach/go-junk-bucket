@@ -2,6 +2,7 @@ package sub
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"sync"
 )
@@ -14,6 +15,7 @@ type Subcommand struct {
 	programName      string
 	programArguments []string
 	Options          []Option
+	activeProcess    *exec.Cmd
 }
 
 func NewSubcommand(programName string, args []string) *Subcommand {
@@ -78,6 +80,7 @@ func (s *Subcommand) Interact(stdin <-chan string, stdout chan<- string, stderr 
 	go PumpLines(&GivePumpSource{Source: stderrPipe}, stderr, &completedReading, &readyGate)
 
 	readyGate.Wait()
+	s.activeProcess = cmd
 	err = cmd.Run()
 	stdoutPipe.Close()
 	stderrPipe.Close()
@@ -91,4 +94,18 @@ func (s *Subcommand) Run(stdout chan<- string, stderr chan<- string) error {
 	close(stdin)
 
 	return s.Interact(stdin, stdout, stderr)
+}
+
+func (s *Subcommand) Kill() error {
+	if s.activeProcess == nil {
+		return nil
+	}
+	return s.activeProcess.Process.Kill()
+}
+
+func (s *Subcommand) SendSignal(signal os.Signal) error {
+	if s.activeProcess == nil {
+		return nil
+	}
+	return s.activeProcess.Process.Signal(signal)
 }
