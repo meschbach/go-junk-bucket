@@ -24,5 +24,11 @@ func ParseJSONFile(fileName string, out interface{}) error {
 		}
 	}
 
-	return json.Unmarshal(bytes, out)
+	if err := json.Unmarshal(bytes, out); err != nil {
+		return &FileContentsError{
+			FileName:   fileName,
+			Underlying: err,
+		}
+	}
+	return nil
 }
