@@ -6,17 +6,17 @@ import (
 )
 
 type resolvedActions[O any] struct {
-	tell reactors.Reactor
+	tell reactors.Boundary
 	op   func(ctx context.Context, resolved Result[O]) error
 }
 
 type Promise[O any] struct {
 	future  *Result[O]
-	on      reactors.Reactor
+	on      reactors.Boundary
 	pending []resolvedActions[O]
 }
 
-func PromiseFuncOn[O any](ctx context.Context, reactor reactors.Reactor, op func(ctx context.Context) (O, error)) *Promise[O] {
+func PromiseFuncOn[O any](ctx context.Context, reactor reactors.Boundary, op func(ctx context.Context) (O, error)) *Promise[O] {
 	promised := &Promise[O]{
 		future: &Result[O]{
 			Resolved: false,
@@ -40,7 +40,7 @@ func PromiseFuncOn[O any](ctx context.Context, reactor reactors.Reactor, op func
 	return promised
 }
 
-func (p *Promise[O]) HandleFuncOn(ctx context.Context, to reactors.Reactor, op func(ctx context.Context, resolved Result[O]) error) {
+func (p *Promise[O]) HandleFuncOn(ctx context.Context, to reactors.Boundary, op func(ctx context.Context, resolved Result[O]) error) {
 	p.on.ScheduleFunc(ctx, func(ctx context.Context) error {
 		if p.future.Resolved {
 			to.ScheduleFunc(ctx, func(ctx context.Context) error {

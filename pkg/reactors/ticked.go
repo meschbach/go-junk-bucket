@@ -2,7 +2,7 @@ package reactors
 
 import "context"
 
-// Ticked is a Reactor externally driven when calling the Tick method.  Events will be queued until it is
+// Ticked is a Boundary externally driven when calling the Tick method.  Events will be queued until it is
 // manually ticked.
 type Ticked struct {
 	scheduled []TickEventFunc

@@ -8,15 +8,15 @@ import "context"
 // TickEventFunc is a handler for a tick event within a reactor.
 type TickEventFunc func(ctx context.Context) error
 
-// Reactor will de-multiplex multiple execution requests into a single serialized stream.
-type Reactor interface {
+// Boundary will de-multiplex multiple execution requests into a single serialized stream.
+type Boundary interface {
 	// ScheduleFunc schedules the given operation to be executed within the reactor upon the next tick of the given
 	// reactor.
 	ScheduleFunc(ctx context.Context, operation TickEventFunc)
 }
 
 // InvokeOp invokes a given op within the context of the reactor.
-func InvokeOp(underlying context.Context, reactor Reactor, op TickEventFunc) error {
+func InvokeOp(underlying context.Context, reactor Boundary, op TickEventFunc) error {
 	ctx := WithReactor(underlying, reactor)
 	return op(ctx)
 }

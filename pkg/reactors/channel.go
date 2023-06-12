@@ -7,7 +7,7 @@ type ChannelEvent struct {
 	op TickEventFunc
 }
 
-// Channel is a Reactor implementation utilizing a chan as a work queue for execution.  When the driving event
+// Channel is a Boundary implementation utilizing a chan as a work queue for execution.  When the driving event
 // loop is ready it should receive from the work queue and dispatch using the Tick method.
 type Channel struct {
 	workQueue chan ChannelEvent
