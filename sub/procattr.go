@@ -20,8 +20,12 @@ func (p *ProcGroup) Customize(cmd *exec.Cmd) {
 	p.cmd = cmd
 }
 
-// Signal dispatches the given signal to the process group
+// Signal dispatches the given signal to the process group.  If the process is not running or this has not been attached
+// then no signals are attached.
 func (p *ProcGroup) Signal(signal syscall.Signal) error {
+	if p.cmd == nil || p.cmd.Process == nil {
+		return nil
+	}
 	pgid, err := syscall.Getpgid(p.cmd.Process.Pid)
 	if err != nil {
 		return err
