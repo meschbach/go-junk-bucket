@@ -1,6 +1,6 @@
 package fx
 
-//Filter returns a subset of elements for each test which is true
+// Filter returns a subset of elements for each test which is true
 func Filter[E any](elements []E, test func(e E) bool) []E {
 	out := make([]E, 0)
 	for _, e := range elements {
