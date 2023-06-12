@@ -9,7 +9,7 @@ import (
 
 func TestTickedReactor(t *testing.T) {
 	t.Run("Given a reactor without any scheduled events", func(t *testing.T) {
-		r := TickedReactor{}
+		r := Ticked{}
 		t.Run("Then the rector states so", func(t *testing.T) {
 			hasMore, err := r.Tick(context.Background(), 10)
 			require.NoError(t, err)

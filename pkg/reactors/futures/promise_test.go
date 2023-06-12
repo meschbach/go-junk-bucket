@@ -11,8 +11,8 @@ import (
 func TestFutureResolution(t *testing.T) {
 	t.Run("Given two reactors", func(t *testing.T) {
 		ctx := context.Background()
-		initReactor := &reactors.TickedReactor{}
-		secondReactor := &reactors.TickedReactor{}
+		initReactor := &reactors.Ticked{}
+		secondReactor := &reactors.Ticked{}
 
 		t.Run("When we schedule on the init reactor with a completion notice on the second reactor", func(t *testing.T) {
 			result := -1

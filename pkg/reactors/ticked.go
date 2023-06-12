@@ -2,14 +2,14 @@ package reactors
 
 import "context"
 
-// TickedReactor is a Reactor externally driven when calling the Tick method.  Events will be queued until it is
+// Ticked is a Reactor externally driven when calling the Tick method.  Events will be queued until it is
 // manually ticked.
-type TickedReactor struct {
+type Ticked struct {
 	scheduled []TickEventFunc
 }
 
 // Tick executes up to the maximum number of event reductions within the reactor.
-func (t *TickedReactor) Tick(ctx context.Context, maximum int) (hasMore bool, err error) {
+func (t *Ticked) Tick(ctx context.Context, maximum int) (hasMore bool, err error) {
 	completedTicks := 0
 	for completedTicks < maximum {
 		if len(t.scheduled) == 0 {
@@ -25,6 +25,6 @@ func (t *TickedReactor) Tick(ctx context.Context, maximum int) (hasMore bool, er
 	return len(t.scheduled) > 0, nil
 }
 
-func (t *TickedReactor) ScheduleFunc(ctx context.Context, operation TickEventFunc) {
+func (t *Ticked) ScheduleFunc(ctx context.Context, operation TickEventFunc) {
 	t.scheduled = append(t.scheduled, operation)
 }

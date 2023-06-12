@@ -9,7 +9,7 @@ import (
 
 func TestChannelReactor(t *testing.T) {
 	t.Run("Given a channel reactor", func(t *testing.T) {
-		reactor, queue := NewChannelReactor(10)
+		reactor, queue := NewChannel(10)
 
 		t.Run("When a unit is scheduled", func(t *testing.T) {
 			called := false
