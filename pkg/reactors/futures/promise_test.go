@@ -8,17 +8,20 @@ import (
 	"testing"
 )
 
+type tickedExampleState struct {
+}
+
 func TestFutureResolution(t *testing.T) {
 	t.Run("Given two reactors", func(t *testing.T) {
 		ctx := context.Background()
-		initReactor := &reactors.Ticked{}
-		secondReactor := &reactors.Ticked{}
+		initReactor := &reactors.Ticked[*tickedExampleState]{}
+		secondReactor := &reactors.Ticked[*tickedExampleState]{}
 
 		t.Run("When we schedule on the init reactor with a completion notice on the second reactor", func(t *testing.T) {
 			result := -1
-			PromiseFuncOn(ctx, initReactor, func(ctx context.Context) (int, error) {
+			PromiseFuncOn[*tickedExampleState, int](ctx, initReactor, func(ctx context.Context, state *tickedExampleState) (int, error) {
 				return 0, nil
-			}).HandleFuncOn(ctx, secondReactor, func(ctx context.Context, resolved Result[int]) error {
+			}).HandleFuncOn(ctx, secondReactor, func(ctx context.Context, state *tickedExampleState, resolved Result[int]) error {
 				result = resolved.Result
 				return nil
 			})
@@ -28,7 +31,7 @@ func TestFutureResolution(t *testing.T) {
 			})
 
 			t.Run("And we run the first reactor", func(t *testing.T) {
-				hasMore, err := initReactor.Tick(ctx, 1)
+				hasMore, err := initReactor.Tick(ctx, 1, nil)
 				require.NoError(t, err)
 				assert.False(t, hasMore)
 
@@ -37,7 +40,7 @@ func TestFutureResolution(t *testing.T) {
 				})
 
 				t.Run("And we run the second reactor", func(t *testing.T) {
-					more, err := secondReactor.Tick(ctx, 1)
+					more, err := secondReactor.Tick(ctx, 1, nil)
 					require.NoError(t, err)
 					assert.False(t, more)
 

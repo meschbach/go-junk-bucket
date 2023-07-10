@@ -9,7 +9,7 @@ import (
 
 func TestChannelReactor(t *testing.T) {
 	t.Run("Given a channel reactor", func(t *testing.T) {
-		reactor, queue := NewChannel(10)
+		reactor, queue := NewChannel[int](10)
 
 		t.Run("When a unit is scheduled", func(t *testing.T) {
 			called := false
@@ -24,7 +24,7 @@ func TestChannelReactor(t *testing.T) {
 
 			t.Run("And it is received from the queue and run", func(t *testing.T) {
 				op := <-queue
-				err := reactor.Tick(context.Background(), op)
+				err := reactor.Tick(context.Background(), op, 0)
 				require.NoError(t, err)
 
 				t.Run("Then the unit of work is executed", func(t *testing.T) {

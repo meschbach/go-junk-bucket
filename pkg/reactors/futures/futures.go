@@ -4,5 +4,6 @@ package futures
 type Result[O any] struct {
 	Resolved bool
 	Result   O
-	Problem  error
+	//Problem, when not nil, indicates the future in question has resolved with an error or has failed
+	Problem error
 }

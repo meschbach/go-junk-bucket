@@ -5,34 +5,29 @@ import (
 	"github.com/meschbach/go-junk-bucket/pkg/reactors"
 )
 
-type resolvedActions[O any] struct {
-	tell reactors.Boundary
-	op   func(ctx context.Context, resolved Result[O]) error
-}
+type resolvedActions[O any] func(ctx context.Context, result Result[O])
 
-type Promise[O any] struct {
+type Promise[S any, O any] struct {
 	future  *Result[O]
-	on      reactors.Boundary
+	on      reactors.Boundary[S]
 	pending []resolvedActions[O]
 }
 
-func PromiseFuncOn[O any](ctx context.Context, reactor reactors.Boundary, op func(ctx context.Context) (O, error)) *Promise[O] {
-	promised := &Promise[O]{
+func PromiseFuncOn[S any, O any](ctx context.Context, reactor reactors.Boundary[S], op func(ctx context.Context, state S) (O, error)) *Promise[S, O] {
+	promised := &Promise[S, O]{
 		future: &Result[O]{
 			Resolved: false,
 		},
 		on: reactor,
 	}
-	reactor.ScheduleFunc(ctx, func(ctx context.Context) error {
-		value, err := op(ctx)
+	reactor.ScheduleStateFunc(ctx, func(ctx context.Context, state S) error {
+		value, err := op(ctx, state)
 		promised.future.Resolved = true
 		promised.future.Result = value
 		promised.future.Problem = err
 
 		for _, resolvers := range promised.pending {
-			resolvers.tell.ScheduleFunc(ctx, func(ctx context.Context) error {
-				return resolvers.op(ctx, *promised.future)
-			})
+			resolvers(ctx, *promised.future)
 		}
 
 		return nil
@@ -40,35 +35,43 @@ func PromiseFuncOn[O any](ctx context.Context, reactor reactors.Boundary, op fun
 	return promised
 }
 
-func (p *Promise[O]) HandleFuncOn(ctx context.Context, to reactors.Boundary, op func(ctx context.Context, resolved Result[O]) error) {
-	p.on.ScheduleFunc(ctx, func(ctx context.Context) error {
-		if p.future.Resolved {
-			to.ScheduleFunc(ctx, func(ctx context.Context) error {
-				return op(ctx, *p.future)
+func (p *Promise[S, O]) HandleFuncOn(ctx context.Context, to reactors.Boundary[S], op func(ctx context.Context, state S, resolved Result[O]) error) {
+	Traverse[S, O, S](ctx, p, to, op)
+}
+
+func Traverse[S any, O any, T any](ctx context.Context, source *Promise[S, O], to reactors.Boundary[T], op func(ctx context.Context, state T, resolved Result[O]) error) {
+	source.on.ScheduleStateFunc(ctx, func(ctx context.Context, state S) error {
+		if source.future.Resolved {
+			to.ScheduleStateFunc(ctx, func(ctx context.Context, state T) error {
+				return op(ctx, state, *source.future)
 			})
 		} else {
-			p.pending = append(p.pending, resolvedActions[O]{
-				tell: to,
-				op:   op,
+			source.pending = append(source.pending, func(ctx context.Context, result Result[O]) {
+				to.ScheduleStateFunc(ctx, func(ctx context.Context, state T) error {
+					return op(ctx, state, result)
+				})
 			})
 		}
 		return nil
 	})
 }
 
+type awaitReactorState struct{}
+
 // Await will wait for completion of a promise on a temporarily created reactor.
-func (p *Promise[O]) Await(ctx context.Context) (Result[O], error) {
-	demultiplexer, input := reactors.NewChannel(1)
+func (p *Promise[S, O]) Await(ctx context.Context) (Result[O], error) {
+	state := &awaitReactorState{}
+	demultiplexer, input := reactors.NewChannel[*awaitReactorState](1)
 	defer demultiplexer.Done()
 	var out Result[O]
-	p.HandleFuncOn(ctx, demultiplexer, func(ctx context.Context, resolved Result[O]) error {
+	Traverse[S, O, *awaitReactorState](ctx, p, demultiplexer, func(ctx context.Context, s *awaitReactorState, resolved Result[O]) error {
 		out = resolved
 		return nil
 	})
 	var err error
 	select {
 	case e := <-input:
-		err = demultiplexer.Tick(ctx, e)
+		err = demultiplexer.Tick(ctx, e, state)
 	case <-ctx.Done():
 		err = ctx.Err()
 	}
