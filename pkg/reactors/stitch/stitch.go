@@ -1,4 +1,4 @@
-// stitch wraps suture to provide a channel based futures
+// Package stitch wraps suture to provide a channel based futures
 package stitch
 
 import (
