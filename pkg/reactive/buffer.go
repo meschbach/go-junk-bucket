@@ -5,15 +5,16 @@ import (
 	"errors"
 )
 
-type BufferState uint8
+type bufferState uint8
 
 const (
-	BufferInit BufferState = iota
-	BufferFinished
+	bufferInit bufferState = iota
+	bufferFinished
 )
 
+// Buffer will hold up to a limit of elements before placing back pressure on a writer.  Usable as a source also.
 type Buffer[T any] struct {
-	state        BufferState
+	state        bufferState
 	sinkEvents   *SinkEvents[T]
 	sourceEvents *SourceEvents[T]
 	limit        int
@@ -22,6 +23,7 @@ type Buffer[T any] struct {
 
 func NewBuffer[T any](maxCount int) *Buffer[T] {
 	return &Buffer[T]{
+		state:      bufferInit,
 		sinkEvents: &SinkEvents[T]{},
 		limit:      maxCount,
 	}
@@ -29,7 +31,7 @@ func NewBuffer[T any](maxCount int) *Buffer[T] {
 
 func (s *Buffer[T]) Write(ctx context.Context, value T) error {
 	switch s.state {
-	case BufferFinished:
+	case bufferFinished:
 		return Done
 	}
 	if len(s.Output) >= s.limit {
@@ -41,11 +43,11 @@ func (s *Buffer[T]) Write(ctx context.Context, value T) error {
 
 func (s *Buffer[T]) Finish(ctx context.Context) error {
 	switch s.state {
-	case BufferFinished:
+	case bufferFinished:
 		return nil
 	}
 
-	s.state = BufferFinished
+	s.state = bufferFinished
 	return nil
 }
 
@@ -63,7 +65,7 @@ func (s *Buffer[T]) SourceEvents() *SourceEvents[T] {
 
 func (s *Buffer[T]) ReadSlice(ctx context.Context, to []T) (int, error) {
 	switch s.state {
-	case BufferFinished:
+	case bufferFinished:
 		if s.Output == nil {
 			return 0, End
 		}
