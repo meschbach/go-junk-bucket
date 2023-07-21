@@ -21,6 +21,7 @@ type Buffer[T any] struct {
 	Output       []T
 }
 
+// NewBuffer creates a new Buffer with the specified maxCount as the limit
 func NewBuffer[T any](maxCount int) *Buffer[T] {
 	return &Buffer[T]{
 		state:      bufferInit,
