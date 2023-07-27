@@ -8,6 +8,12 @@ import (
 )
 
 func TestChannelReactor(t *testing.T) {
+	t.Run("Type Compliance", func(t *testing.T) {
+		t.Run("Channel as a reactor", func(t *testing.T) {
+			assert.Implements(t, (*Boundary[int])(nil), &Channel[int]{})
+		})
+	})
+
 	t.Run("Given a channel reactor", func(t *testing.T) {
 		reactor, queue := NewChannel[int](10)
 
