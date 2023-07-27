@@ -2,6 +2,7 @@ package stitch
 
 import (
 	"context"
+	"errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/thejerf/suture/v4"
@@ -20,7 +21,10 @@ func TestStitch(t *testing.T) {
 		base.Add(out)
 		baseContext, baseDone := context.WithCancel(context.Background())
 		go func() {
-			require.NoError(t, base.Serve(baseContext))
+			err := base.Serve(baseContext)
+			if !errors.Is(err, context.Canceled) {
+				assert.NoError(t, err)
+			}
 		}()
 		t.Cleanup(baseDone)
 
