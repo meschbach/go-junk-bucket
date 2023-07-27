@@ -18,6 +18,7 @@ type SourceEvents[T any] struct {
 type Source[T any] interface {
 	SourceEvents() *SourceEvents[T]
 	ReadSlice(ctx context.Context, to []T) (int, error)
+	// Resume begins emitting events of T until pushback is received from an event.
 	Resume(ctx context.Context) error
 }
 

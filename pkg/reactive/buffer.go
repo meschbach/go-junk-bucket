@@ -8,7 +8,8 @@ import (
 type bufferState uint8
 
 const (
-	bufferInit bufferState = iota
+	bufferPaused bufferState = iota
+	bufferFlowing
 	bufferFinished
 )
 
@@ -24,9 +25,10 @@ type Buffer[T any] struct {
 // NewBuffer creates a new Buffer with the specified maxCount as the limit
 func NewBuffer[T any](maxCount int) *Buffer[T] {
 	return &Buffer[T]{
-		state:      bufferInit,
-		sinkEvents: &SinkEvents[T]{},
-		limit:      maxCount,
+		state:        bufferPaused,
+		sinkEvents:   &SinkEvents[T]{},
+		sourceEvents: &SourceEvents[T]{},
+		limit:        maxCount,
 	}
 }
 
@@ -34,11 +36,21 @@ func (s *Buffer[T]) Write(ctx context.Context, value T) error {
 	switch s.state {
 	case bufferFinished:
 		return Done
+	case bufferPaused:
+		if len(s.Output) >= s.limit {
+			return Full
+		}
+		s.Output = append(s.Output, value)
+	case bufferFlowing:
+		if err := s.sourceEvents.Data.Emit(ctx, value); err != nil {
+			if errors.Is(err, Full) {
+				s.Output = append(s.Output, value)
+				s.state = bufferPaused
+			} else {
+				return err
+			}
+		}
 	}
-	if len(s.Output) >= s.limit {
-		return Full
-	}
-	s.Output = append(s.Output, value)
 	return nil
 }
 
@@ -57,7 +69,29 @@ func (s *Buffer[T]) SinkEvents() *SinkEvents[T] {
 }
 
 func (s *Buffer[T]) Resume(ctx context.Context) error {
-	return errors.New("todo")
+	switch s.state {
+	case bufferFinished:
+		return End
+	case bufferFlowing:
+		return nil
+	}
+	for {
+		if len(s.Output) == 0 {
+			if err := s.sinkEvents.OnDrain.Emit(ctx, s); err != nil {
+				return err
+			}
+			if len(s.Output) == 0 {
+				s.state = bufferFlowing
+				return nil
+			}
+		}
+		e := s.Output[0]
+		if err := s.sourceEvents.Data.Emit(ctx, e); err == nil {
+			s.Output = s.Output[1:]
+		} else {
+			return err
+		}
+	}
 }
 
 func (s *Buffer[T]) SourceEvents() *SourceEvents[T] {
