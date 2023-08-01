@@ -16,16 +16,16 @@ type Subscription[E any] struct {
 	target Listener[E]
 }
 
-// EventEmitter manages a set of subscriptions and dispatching to those subscriptions.  EventEmitter is not thread or
+// Dispatcher manages a set of subscriptions and dispatching to those subscriptions.  Dispatcher is not thread or
 // goproc safe.
-type EventEmitter[E any] struct {
+type Dispatcher[E any] struct {
 	//nextTag is the unique tag value to issue to the next subscriber
 	nextTag   int
 	listeners []*Subscription[E]
 }
 
 // On registers a given listener to receive events on the next broadcast.
-func (e *EventEmitter[E]) On(l Listener[E]) *Subscription[E] {
+func (e *Dispatcher[E]) On(l Listener[E]) *Subscription[E] {
 	tag := e.nextTag
 	e.nextTag++
 	sub := &Subscription[E]{
@@ -37,14 +37,14 @@ func (e *EventEmitter[E]) On(l Listener[E]) *Subscription[E] {
 }
 
 // Off removes the given subscription from further event broadcasts.
-func (e *EventEmitter[E]) Off(s *Subscription[E]) {
+func (e *Dispatcher[E]) Off(s *Subscription[E]) {
 	e.listeners = fx.Filter(e.listeners, func(e *Subscription[E]) bool {
 		return e.tag != s.tag
 	})
 }
 
 // Once registers the given listener l for a single broadcast then the subscription is removed from further broadcasts.
-func (e *EventEmitter[E]) Once(l Listener[E]) *Subscription[E] {
+func (e *Dispatcher[E]) Once(l Listener[E]) *Subscription[E] {
 	var sub *Subscription[E]
 	sub = e.On(func(ctx context.Context, event E) error {
 		err := l(ctx, event)
@@ -55,7 +55,7 @@ func (e *EventEmitter[E]) Once(l Listener[E]) *Subscription[E] {
 }
 
 // Emit dispatches the event to all subscriptions returning a set of errors if any occur
-func (e *EventEmitter[E]) Emit(ctx context.Context, event E) error {
+func (e *Dispatcher[E]) Emit(ctx context.Context, event E) error {
 	var problems []error
 	dispatchTo := append(e.listeners)
 	for _, l := range dispatchTo {

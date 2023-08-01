@@ -8,7 +8,7 @@ import (
 
 func TestEventEmitter(t *testing.T) {
 	t.Run("Given an event emitter", func(t *testing.T) {
-		e := EventEmitter[int]{}
+		e := Dispatcher[int]{}
 		t.Run("When a listener is registered", func(t *testing.T) {
 			received := -1
 			e.On(func(ctx context.Context, event int) error {
