@@ -1,3 +1,4 @@
+// Package dispatcher provides a multi-goproc safe event dispatching system
 package dispatcher
 
 type dispatcherOperation[T any] interface {
