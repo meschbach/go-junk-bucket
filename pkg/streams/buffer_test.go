@@ -1,4 +1,4 @@
-package reactive
+package streams
 
 import (
 	"context"
