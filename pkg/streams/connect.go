@@ -2,14 +2,15 @@ package streams
 
 import (
 	"context"
+	"github.com/meschbach/go-junk-bucket/pkg/emitter"
 )
 
 type ConnectedPipe[E any] struct {
 	from Source[E]
 	sink Sink[E]
 
-	data  *Subscription[E]
-	drain *Subscription[Sink[E]]
+	data  *emitter.Subscription[E]
+	drain *emitter.Subscription[Sink[E]]
 }
 
 func (c *ConnectedPipe[E]) Close() error {

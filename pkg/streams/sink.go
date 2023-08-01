@@ -1,10 +1,13 @@
 package streams
 
-import "context"
+import (
+	"context"
+	"github.com/meschbach/go-junk-bucket/pkg/emitter"
+)
 
 type SinkEvents[T any] struct {
-	OnDrain    EventEmitter[Sink[T]]
-	OnFinished EventEmitter[Sink[T]]
+	OnDrain    emitter.EventEmitter[Sink[T]]
+	OnFinished emitter.EventEmitter[Sink[T]]
 }
 
 type Sink[T any] interface {

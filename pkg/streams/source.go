@@ -4,15 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/meschbach/go-junk-bucket/pkg/emitter"
 )
 
 var End = errors.New("end")
 
 // SourceEvents are the set of events which may be emitted from a source to signal various conditions and states.
 type SourceEvents[T any] struct {
-	Data  EventEmitter[T]
-	End   EventEmitter[Source[T]]
-	Close EventEmitter[Source[T]]
+	Data  emitter.EventEmitter[T]
+	End   emitter.EventEmitter[Source[T]]
+	Close emitter.EventEmitter[Source[T]]
 }
 
 type Source[T any] interface {
