@@ -13,7 +13,10 @@ type ConnectedPipe[E any] struct {
 	drain *emitter.Subscription[Sink[E]]
 }
 
-func (c *ConnectedPipe[E]) Close() error {
+func (c *ConnectedPipe[E]) Close(ctx context.Context) error {
+	if err := c.from.Pause(ctx); err != nil {
+		return err
+	}
 	c.from.SourceEvents().Data.Off(c.data)
 	c.sink.SinkEvents().OnDrain.Off(c.drain)
 	return nil
@@ -22,12 +25,12 @@ func (c *ConnectedPipe[E]) Close() error {
 // Connect allows events to flow from a source to a sink.
 func Connect[E any](ctx context.Context, from Source[E], to Sink[E]) (*ConnectedPipe[E], error) {
 	sourceEvents := from.SourceEvents()
-	sourceData := sourceEvents.Data.On(func(ctx context.Context, event E) error {
+	sourceData := sourceEvents.Data.OnE(func(ctx context.Context, event E) error {
 		return to.Write(ctx, event)
 	})
 
 	sinkEvents := to.SinkEvents()
-	sinkDrain := sinkEvents.OnDrain.On(func(ctx context.Context, event Sink[E]) error {
+	sinkDrain := sinkEvents.OnDrain.OnE(func(ctx context.Context, event Sink[E]) error {
 		return from.Resume(ctx)
 	})
 

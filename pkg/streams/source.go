@@ -21,6 +21,7 @@ type Source[T any] interface {
 	ReadSlice(ctx context.Context, to []T) (int, error)
 	// Resume begins emitting events of T until pushback is received from an event.
 	Resume(ctx context.Context) error
+	Pause(ctx context.Context) error
 }
 
 func FromSlice[T any](values []T) Source[T] {
@@ -67,4 +68,9 @@ func (f *fixedSlice[T]) Resume(ctx context.Context) error {
 			return err
 		}
 	}
+}
+
+// todo: write implementation
+func (f *fixedSlice[T]) Pause(ctx context.Context) error {
+	return errors.New("todo")
 }

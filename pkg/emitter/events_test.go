@@ -12,9 +12,8 @@ func TestEventEmitter(t *testing.T) {
 		e := Dispatcher[int]{}
 		t.Run("When a listener is registered", func(t *testing.T) {
 			received := -1
-			subscription := e.On(func(ctx context.Context, event int) error {
+			subscription := e.On(func(ctx context.Context, event int) {
 				received = event
-				return nil
 			})
 
 			t.Run("And an event is dispatched", func(t *testing.T) {
@@ -39,13 +38,11 @@ func TestEventEmitter(t *testing.T) {
 		e := Dispatcher[int]{}
 		lastOuterValue := -1
 		immediatelyCalled := -1
-		e.On(func(ctx context.Context, event int) error {
+		e.On(func(ctx context.Context, event int) {
 			lastOuterValue = event
-			e.Once(func(ctx context.Context, event int) error {
+			e.Once(func(ctx context.Context, event int) {
 				immediatelyCalled = event
-				return nil
 			})
-			return nil
 		})
 
 		t.Run("When initially dispatching", func(t *testing.T) {

@@ -98,7 +98,7 @@ func TestLimitedSliceAccumulator(t *testing.T) {
 				})
 
 				t.Run("And is closed", func(t *testing.T) {
-					require.NoError(t, connection.Close())
+					require.NoError(t, connection.Close(ctx))
 
 					t.Run("Then another written element is not transmitted", func(t *testing.T) {
 						require.NoError(t, source.Write(ctx, 7))
@@ -120,7 +120,7 @@ func TestLimitedSliceAccumulator(t *testing.T) {
 		cleanup, err := Connect[int](ctx, source, sink)
 		require.NoError(t, err)
 		t.Cleanup(func() {
-			require.NoError(t, cleanup.Close())
+			require.NoError(t, cleanup.Close(ctx))
 		})
 
 		t.Run("When resuming the source", func(t *testing.T) {

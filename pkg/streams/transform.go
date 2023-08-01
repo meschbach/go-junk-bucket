@@ -33,17 +33,20 @@ func NewTransform[I any, O any](fn TransformerFunc[I, O]) *Transformer[I, O] {
 	}
 }
 
+// Pump draws from source, transforms, then pushes to target.
+//
+// Deprecated: Use Connect as it has better test coverage and less specific
 func (t *Transformer[I, O]) Pump(ctx context.Context, source Source[I], target Sink[O]) error {
-	target.SinkEvents().OnDrain.On(func(ctx context.Context, event Sink[O]) error {
+	target.SinkEvents().OnDrain.OnE(func(ctx context.Context, event Sink[O]) error {
 		return t.Resume(ctx)
 	})
-	t.sinkEvents.OnDrain.On(func(ctx context.Context, event Sink[I]) error {
+	t.sinkEvents.OnDrain.OnE(func(ctx context.Context, event Sink[I]) error {
 		return source.Resume(ctx)
 	})
-	t.sourceEvents.Data.On(func(ctx context.Context, event O) error {
+	t.sourceEvents.Data.OnE(func(ctx context.Context, event O) error {
 		return target.Write(ctx, event)
 	})
-	source.SourceEvents().Data.On(func(ctx context.Context, event I) error {
+	source.SourceEvents().Data.OnE(func(ctx context.Context, event I) error {
 		return t.Write(ctx, event)
 	})
 	return target.Resume(ctx)
@@ -59,6 +62,16 @@ func (t *Transformer[I, O]) Resume(ctx context.Context) error {
 		return err
 	}
 	return t.sinkEvents.OnDrain.Emit(ctx, t)
+}
+
+func (t *Transformer[I, O]) Pause(ctx context.Context) error {
+	switch t.state {
+	case TransformerFinished:
+		return Done
+	case TransformerFlowing:
+		t.state = TransformerPaused
+	}
+	return nil
 }
 
 func (t *Transformer[I, O]) pumpInternal(ctx context.Context) error {

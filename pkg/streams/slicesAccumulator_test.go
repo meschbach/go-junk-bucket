@@ -14,10 +14,9 @@ func TestSliceAccumulator(t *testing.T) {
 
 		s := NewSliceAccumulator[int]()
 		hasFinished := false
-		s.Events.OnFinished.On(func(ctx context.Context, event Sink[int]) error {
+		s.Events.OnFinished.On(func(ctx context.Context, event Sink[int]) {
 			fmt.Println("has finished called")
 			hasFinished = true
-			return nil
 		})
 
 		t.Run("When written too", func(t *testing.T) {

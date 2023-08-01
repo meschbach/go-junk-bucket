@@ -68,6 +68,16 @@ func (s *Buffer[T]) SinkEvents() *SinkEvents[T] {
 	return s.sinkEvents
 }
 
+func (s *Buffer[T]) Pause(ctx context.Context) error {
+	switch s.state {
+	case bufferFinished:
+		return End
+	case bufferFlowing:
+		s.state = bufferPaused
+	}
+	return nil
+}
+
 func (s *Buffer[T]) Resume(ctx context.Context) error {
 	switch s.state {
 	case bufferFinished:
