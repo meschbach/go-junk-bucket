@@ -2,6 +2,7 @@ package emitter
 
 import (
 	"context"
+	"errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -58,6 +59,31 @@ func TestEventEmitter(t *testing.T) {
 			t.Run("Then both handlers receive the value", func(t *testing.T) {
 				assert.Equal(t, 46, lastOuterValue)
 				assert.Equal(t, 46, immediatelyCalled)
+			})
+		})
+	})
+
+	t.Run("Given an event listener which generates an error", func(t *testing.T) {
+		e := Dispatcher[int]{}
+		todo := errors.New("todo")
+		secondListener := -1
+
+		e.OnE(func(ctx context.Context, event int) error {
+			return todo
+		})
+		e.On(func(ctx context.Context, event int) {
+			secondListener = event
+		})
+
+		t.Run("When an event is emitted", func(t *testing.T) {
+			exampleValue := 128
+			problem := e.Emit(context.Background(), exampleValue)
+
+			t.Run("Then the error is returned", func(t *testing.T) {
+				assert.ErrorIs(t, problem, todo)
+			})
+			t.Run("Then the second event handler is still called", func(t *testing.T) {
+				assert.Equal(t, exampleValue, secondListener)
 			})
 		})
 	})
