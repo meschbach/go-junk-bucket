@@ -11,9 +11,8 @@ var End = errors.New("end")
 
 // SourceEvents are the set of events which may be emitted from a source to signal various conditions and states.
 type SourceEvents[T any] struct {
-	Data  emitter.Dispatcher[T]
-	End   emitter.Dispatcher[Source[T]]
-	Close emitter.Dispatcher[Source[T]]
+	Data emitter.Dispatcher[T]
+	End  emitter.Dispatcher[Source[T]]
 }
 
 type Source[T any] interface {

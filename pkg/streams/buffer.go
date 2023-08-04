@@ -60,8 +60,10 @@ func (s *Buffer[T]) Finish(ctx context.Context) error {
 		return nil
 	}
 
+	//todo: intermediate state where we are draining the buffers
 	s.state = bufferFinished
-	return nil
+	//todo: test this is dispatched
+	return s.sinkEvents.OnFinished.Emit(ctx, s)
 }
 
 func (s *Buffer[T]) SinkEvents() *SinkEvents[T] {
