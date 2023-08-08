@@ -12,6 +12,11 @@ type exampleState struct {
 }
 
 func TestTickedReactor(t *testing.T) {
+	t.Run("Ticked reactor fulfills boundary context", func(t *testing.T) {
+		type exampleState struct{}
+		assert.Implements(t, (*Boundary[exampleState])(nil), &Ticked[exampleState]{})
+	})
+
 	t.Run("Given a reactor without any scheduled events", func(t *testing.T) {
 		r := Ticked[*exampleState]{}
 		state := &exampleState{atomic: 0}
