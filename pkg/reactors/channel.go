@@ -37,6 +37,23 @@ func (c *Channel[S]) ScheduleStateFunc(ctx context.Context, operation TickEventS
 	}
 }
 
+func (c *Channel[S]) ConsumeAll(ctx context.Context, state S) (int, error) {
+	count := 0
+	for {
+		select {
+		case e := <-c.workQueue:
+			count++
+			if err := c.Tick(ctx, e, state); err != nil {
+				return count, err
+			}
+		case <-ctx.Done():
+			return count, ctx.Err()
+		default:
+			return count, nil
+		}
+	}
+}
+
 func (c *Channel[S]) Tick(ctx context.Context, event ChannelEvent[S], state S) error {
 	return InvokeStateOp[S](ctx, c, state, event.op)
 }
