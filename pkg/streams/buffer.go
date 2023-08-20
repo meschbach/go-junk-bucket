@@ -3,9 +3,26 @@ package streams
 import (
 	"context"
 	"errors"
+	"fmt"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type bufferState uint8
+
+func (b bufferState) String() string {
+	switch b {
+	case bufferPaused:
+		return "paused"
+	case bufferFlowing:
+		return "flowing"
+	case bufferFinished:
+		return "finished"
+	default:
+		panic("unknown buffer state")
+	}
+}
 
 const (
 	bufferPaused bufferState = iota
@@ -32,21 +49,29 @@ func NewBuffer[T any](maxCount int) *Buffer[T] {
 	}
 }
 
-func (s *Buffer[T]) Write(ctx context.Context, value T) error {
+func (s *Buffer[T]) Write(parent context.Context, value T) error {
+	ctx, span := tracing.Start(parent, "Buffer.Write", trace.WithAttributes(attribute.Stringer("state", s.state), attribute.Stringer("Buffer", ptrFormattedStringer[Buffer[T]]{s})))
+
 	switch s.state {
 	case bufferFinished:
 		return Done
 	case bufferPaused:
 		if len(s.Output) >= s.limit {
+			span.AddEvent("full")
 			return Full
 		}
 		s.Output = append(s.Output, value)
+		span.AddEvent("buffered")
 	case bufferFlowing:
+		span.AddEvent("flowing")
 		if err := s.sourceEvents.Data.Emit(ctx, value); err != nil {
 			if errors.Is(err, Full) {
+				span.AddEvent("destinations-full")
 				s.Output = append(s.Output, value)
 				s.state = bufferPaused
 			} else {
+				span.SetStatus(codes.Error, "source dispatch failed")
+				span.RecordError(err)
 				return err
 			}
 		}
@@ -129,4 +154,12 @@ func (s *Buffer[T]) ReadSlice(ctx context.Context, to []T) (int, error) {
 		s.Output = s.Output[count:]
 	}
 	return count, nil
+}
+
+type ptrFormattedStringer[T any] struct {
+	obj *T
+}
+
+func (p ptrFormattedStringer[T]) String() string {
+	return fmt.Sprintf("%p", p.obj)
 }

@@ -3,6 +3,8 @@ package streams
 import (
 	"context"
 	"github.com/meschbach/go-junk-bucket/pkg/emitter"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type ConnectedPipe[E any] struct {
@@ -14,6 +16,9 @@ type ConnectedPipe[E any] struct {
 }
 
 func (c *ConnectedPipe[E]) Close(ctx context.Context) error {
+	span := trace.SpanFromContext(ctx)
+	span.AddEvent("ConnectedPipe.Close")
+
 	if err := c.from.Pause(ctx); err != nil {
 		return err
 	}
@@ -24,20 +29,29 @@ func (c *ConnectedPipe[E]) Close(ctx context.Context) error {
 
 // Connect allows events to flow from a source to a sink.
 func Connect[E any](ctx context.Context, from Source[E], to Sink[E]) (*ConnectedPipe[E], error) {
+	pipe := &ConnectedPipe[E]{
+		from: from,
+		sink: to,
+	}
+
+	attrs := trace.WithAttributes(attribute.Stringer("ConnectedPipe", ptrFormattedStringer[ConnectedPipe[E]]{pipe}))
+	span := trace.SpanFromContext(ctx)
+	span.AddEvent("ConnectedPipe.Connect", attrs)
+
 	sourceEvents := from.SourceEvents()
-	sourceData := sourceEvents.Data.OnE(func(ctx context.Context, event E) error {
+	pipe.data = sourceEvents.Data.OnE(func(ctx context.Context, event E) error {
+		span := trace.SpanFromContext(ctx)
+		span.AddEvent("ConnectedPipe.Source.Data", attrs)
 		return to.Write(ctx, event)
 	})
 
 	sinkEvents := to.SinkEvents()
-	sinkDrain := sinkEvents.OnDrain.OnE(func(ctx context.Context, event Sink[E]) error {
+	pipe.drain = sinkEvents.OnDrain.OnE(func(ctx context.Context, event Sink[E]) error {
+		span := trace.SpanFromContext(ctx)
+		span.AddEvent("ConnectedPipe.Source.Data", attrs)
+
 		return from.Resume(ctx)
 	})
 
-	return &ConnectedPipe[E]{
-		from:  from,
-		sink:  to,
-		data:  sourceData,
-		drain: sinkDrain,
-	}, from.Resume(ctx)
+	return pipe, from.Resume(ctx)
 }

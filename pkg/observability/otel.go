@@ -7,6 +7,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/jaeger"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -54,13 +55,19 @@ func SetupTracing(programContext context.Context, config Config) error {
 	//not sure why this manually needs to be configured
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 
-	fmt.Printf("Tracing %#v\n", config)
+	if !config.Silent {
+		fmt.Printf("Tracing %#v\n", config)
+	}
 	var exp trace.SpanExporter
 	var err error
 	switch config.Exporter {
+	case "stdout":
+		exp, err = stdouttrace.New(stdouttrace.WithPrettyPrint())
 	case "jaeger":
 		jaegerEndpoint := pkg.EnvOrDefault("JAEGER_ENDPOINT", "http://localhost:14268/api/traces")
-		fmt.Printf("Using %q for Jaeger endpoint\n", jaegerEndpoint)
+		if !config.Silent {
+			fmt.Printf("Using %q for Jaeger endpoint\n", jaegerEndpoint)
+		}
 		exp, err = newJaegerExporter(jaegerEndpoint)
 	case "none":
 	default:

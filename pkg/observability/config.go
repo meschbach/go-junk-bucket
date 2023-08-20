@@ -14,6 +14,8 @@ type Config struct {
 	Exporter string `json:"exporter"`
 	//ServiceName is the name to utilize in report tracing
 	ServiceName string `json:"service-name"`
+	//Silent will not generate any output regarding the runtime configuration of the otel system
+	Silent bool `json:"silent"`
 }
 
 // DefaultConfig pulls values from the environment for the service or uses sensible defaults.
@@ -28,16 +30,22 @@ func (c Config) Start() (*Component, error) {
 	//not sure why this manually needs to be configured; perhaps need to look into others
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 
-	fmt.Printf("Tracing %#v\n", c)
+	if !c.Silent {
+		fmt.Printf("Tracing %#v\n", c)
+	}
 	var exp trace.SpanExporter
 	var err error
 	switch c.Exporter {
 	case "jaeger":
 		jaegerEndpoint := pkg.EnvOrDefault("JAEGER_ENDPOINT", "http://localhost:14268/api/traces")
-		fmt.Printf("Using %q for Jaeger endpoint\n", jaegerEndpoint)
+		if !c.Silent {
+			fmt.Printf("Using %q for Jaeger endpoint\n", jaegerEndpoint)
+		}
 		exp, err = newJaegerExporter(jaegerEndpoint)
 	case "none":
-		fmt.Println("No exporter configured.  Not recording spans.")
+		if !c.Silent {
+			fmt.Println("No exporter configured.  Not recording spans.")
+		}
 	default:
 		err = &UnknownExportError{Exporter: c.Exporter}
 	}
