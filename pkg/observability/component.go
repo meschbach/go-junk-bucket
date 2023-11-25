@@ -2,6 +2,7 @@ package observability
 
 import (
 	"context"
+	"errors"
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -10,11 +11,8 @@ type Component struct {
 }
 
 func (c *Component) ShutdownGracefully(ctx context.Context) error {
-	if err := c.otelAnchor.ForceFlush(ctx); err != nil {
-		return err
-	}
 	if err := c.otelAnchor.Shutdown(ctx); err != nil {
-		return err
+		return errors.Join(errors.New("otel shutdown"), err)
 	}
 	return nil
 }
