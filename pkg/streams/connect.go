@@ -11,8 +11,9 @@ type ConnectedPipe[E any] struct {
 	from Source[E]
 	sink Sink[E]
 
-	data  *emitter.Subscription[E]
-	drain *emitter.Subscription[Sink[E]]
+	onSourceData     *emitter.Subscription[E]
+	onSourceFinished *emitter.Subscription[Source[E]]
+	drain            *emitter.Subscription[Sink[E]]
 }
 
 func (c *ConnectedPipe[E]) Close(ctx context.Context) error {
@@ -22,7 +23,9 @@ func (c *ConnectedPipe[E]) Close(ctx context.Context) error {
 	if err := c.from.Pause(ctx); err != nil {
 		return err
 	}
-	c.from.SourceEvents().Data.Off(c.data)
+	sourceEvents := c.from.SourceEvents()
+	sourceEvents.Data.Off(c.onSourceData)
+	sourceEvents.End.Off(c.onSourceFinished)
 	c.sink.SinkEvents().OnDrain.Off(c.drain)
 	return nil
 }
@@ -39,10 +42,15 @@ func Connect[E any](ctx context.Context, from Source[E], to Sink[E]) (*Connected
 	span.AddEvent("ConnectedPipe.Connect", attrs)
 
 	sourceEvents := from.SourceEvents()
-	pipe.data = sourceEvents.Data.OnE(func(ctx context.Context, event E) error {
+	pipe.onSourceData = sourceEvents.Data.OnE(func(ctx context.Context, event E) error {
 		span := trace.SpanFromContext(ctx)
 		span.AddEvent("ConnectedPipe.Source.Data", attrs)
 		return to.Write(ctx, event)
+	})
+	pipe.onSourceFinished = sourceEvents.End.OnE(func(ctx context.Context, event Source[E]) error {
+		span := trace.SpanFromContext(ctx)
+		span.AddEvent("ConnectedPipe.Source.End", attrs)
+		return to.Finish(ctx)
 	})
 
 	sinkEvents := to.SinkEvents()
