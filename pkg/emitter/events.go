@@ -32,6 +32,7 @@ func (e *Dispatcher[E]) OnE(l ListenerE[E]) *Subscription[E] {
 	return sub
 }
 
+// On registers a given listener to receive events on the next broadcast.
 func (e *Dispatcher[E]) On(l Listener[E]) *Subscription[E] {
 	return e.OnE(func(ctx context.Context, event E) error {
 		l(ctx, event)
