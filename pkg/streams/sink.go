@@ -6,8 +6,9 @@ import (
 )
 
 type SinkEvents[T any] struct {
-	OnDrain    emitter.Dispatcher[Sink[T]]
-	OnFinished emitter.Dispatcher[Sink[T]]
+	OnDrain     emitter.Dispatcher[Sink[T]]
+	OnFinishing emitter.Dispatcher[Sink[T]]
+	OnFinished  emitter.Dispatcher[Sink[T]]
 }
 
 type Sink[T any] interface {

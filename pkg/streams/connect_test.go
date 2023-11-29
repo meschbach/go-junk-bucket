@@ -10,11 +10,7 @@ import (
 )
 
 func TestConnect(t *testing.T) {
-
-	//todo: really testing Connect
 	t.Run("Given two connected streams with elements passed", func(t *testing.T) {
-		t.Parallel()
-
 		ctx, done := context.WithTimeout(context.Background(), 1*time.Second)
 		t.Cleanup(done)
 
@@ -36,7 +32,7 @@ func TestConnect(t *testing.T) {
 			})
 
 			t.Run("Then the sink is also finished", func(t *testing.T) {
-				assert.Equal(t, bufferFinished, sink.state, fmt.Sprintf("expected state is finished, got %s", sink.state.String()))
+				assert.Equal(t, bufferFinishing, sink.writeState, fmt.Sprintf("target write state should be finishing, got %s", sink.writeState))
 			})
 		})
 	})
