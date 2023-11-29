@@ -79,6 +79,8 @@ func (s *Buffer[T]) Write(parent context.Context, value T) error {
 	return nil
 }
 
+// Finish will transition the buffer into FinalFlush mode until all elements are read, at which point the buffer will
+// the transition into Finished.
 func (s *Buffer[T]) Finish(ctx context.Context) error {
 	switch s.state {
 	case bufferFinished:
@@ -88,7 +90,9 @@ func (s *Buffer[T]) Finish(ctx context.Context) error {
 	//todo: intermediate state where we are draining the buffers
 	s.state = bufferFinished
 	//todo: test this is dispatched
-	return s.sinkEvents.OnFinished.Emit(ctx, s)
+	sourceEmitErrors := s.sourceEvents.End.Emit(ctx, s)
+	sinkEmitErrors := s.sinkEvents.OnFinished.Emit(ctx, s)
+	return errors.Join(sourceEmitErrors, sinkEmitErrors)
 }
 
 func (s *Buffer[T]) SinkEvents() *SinkEvents[T] {

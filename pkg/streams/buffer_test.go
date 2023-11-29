@@ -11,14 +11,12 @@ import (
 func TestLimitedSliceAccumulator(t *testing.T) {
 	t.Run("Type Compliance", func(t *testing.T) {
 		t.Parallel()
-		//t.Skip()
 		assert.Implements(t, (*Sink[int])(nil), NewBuffer[int](3))
 		assert.Implements(t, (*Source[float32])(nil), NewBuffer[float32](3))
 	})
 
 	t.Run("Given a Limited accumulator of 3", func(t *testing.T) {
 		t.Parallel()
-		//t.Skip()
 		ctx, done := context.WithCancel(context.Background())
 		t.Cleanup(done)
 
@@ -69,7 +67,6 @@ func TestLimitedSliceAccumulator(t *testing.T) {
 
 	t.Run("Given two streams", func(t *testing.T) {
 		t.Parallel()
-		//t.Skip()
 		ctx, done := context.WithTimeout(context.Background(), 1*time.Second)
 		t.Cleanup(done)
 
@@ -97,7 +94,7 @@ func TestLimitedSliceAccumulator(t *testing.T) {
 					})
 				})
 
-				t.Run("And is closed", func(t *testing.T) {
+				t.Run("And the connection is closed", func(t *testing.T) {
 					require.NoError(t, connection.Close(ctx))
 
 					t.Run("Then another written element is not transmitted", func(t *testing.T) {
