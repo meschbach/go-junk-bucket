@@ -9,3 +9,6 @@ var Done = errors.New("stream done")
 // Full represents a writable stream whose internal buffers which have been filled.  A Full error provides a clear
 // signal for backpressure on the emitting source.
 var Full = errors.New("stream full")
+
+// End indicates a source has read all elements available on the stream.
+var End = errors.New("stream end")
