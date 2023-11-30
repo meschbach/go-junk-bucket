@@ -11,6 +11,9 @@ type Component struct {
 }
 
 func (c *Component) ShutdownGracefully(ctx context.Context) error {
+	if c == nil {
+		return nil
+	}
 	if err := c.otelAnchor.Shutdown(ctx); err != nil {
 		return errors.Join(errors.New("otel shutdown"), err)
 	}

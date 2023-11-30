@@ -58,6 +58,7 @@ func (c Config) Start(setup context.Context) (*Component, error) {
 		if !c.Silent {
 			fmt.Println("No exporter configured.  Not recording spans.")
 		}
+		return nil, nil
 	default:
 		err = &UnknownExportError{Exporter: c.Exporter}
 	}
