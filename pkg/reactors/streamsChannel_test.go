@@ -2,7 +2,6 @@ package reactors
 
 import (
 	"context"
-	"fmt"
 	"github.com/meschbach/go-junk-bucket/pkg/streams"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -51,7 +50,6 @@ func TestStreamFromTickToChannel(t *testing.T) {
 
 		sourceReactor.ScheduleFunc(testContext, func(ctx context.Context) error {
 			VerifyWithinBoundary[int](ctx, sourceReactor)
-			fmt.Println("Producing event")
 			return sourceReactorOutput.Write(ctx, 42)
 		})
 
