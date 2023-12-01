@@ -39,4 +39,21 @@ func TestChannelReactor(t *testing.T) {
 			})
 		})
 	})
+
+	t.Run("Given a channel reactor", func(t *testing.T) {
+		reactor, _ := NewChannel[int](10)
+
+		t.Run("When requested to consume all", func(t *testing.T) {
+			var invokingContext context.Context
+			reactor.ScheduleFunc(context.Background(), func(ctx context.Context) error {
+				invokingContext = ctx
+				return nil
+			})
+			count, err := reactor.ConsumeAll(context.Background(), 0)
+			assert.Equal(t, 1, count)
+			assert.NoError(t, err)
+
+			AssertWithinBoundary[int](t, invokingContext, reactor)
+		})
+	})
 }

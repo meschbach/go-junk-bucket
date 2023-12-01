@@ -13,6 +13,9 @@ func For[S any](ctx context.Context) Boundary[S] {
 }
 
 func Maybe[S any](ctx context.Context) (boundary Boundary[S], has bool) {
+	if ctx == nil {
+		return nil, false
+	}
 	b, ok := ctx.Value(ContextKey).(Boundary[S])
 	if !ok || b == nil {
 		return nil, false
