@@ -59,21 +59,47 @@ type Buffer[T any] struct {
 	sourceEvents *SourceEvents[T]
 	limit        int
 	Output       []T
+	traceConfig  bufferTraceOpts
+}
+
+type BufferOpt[T any] func(b *Buffer[T])
+
+func WithBufferTracePrefix[T any](prefix string) BufferOpt[T] {
+	return func(b *Buffer[T]) {
+		b.traceConfig.writeSpan = prefix + ".Write"
+	}
+}
+
+type bufferTraceOpts struct {
+	writeSpan string
 }
 
 // NewBuffer creates a new Buffer with the specified maxCount as the limit
-func NewBuffer[T any](maxCount int) *Buffer[T] {
-	return &Buffer[T]{
+func NewBuffer[T any](maxCount int, opts ...BufferOpt[T]) *Buffer[T] {
+	b := &Buffer[T]{
 		readState:    bufferPaused,
 		writeState:   bufferWritable,
 		sinkEvents:   &SinkEvents[T]{},
 		sourceEvents: &SourceEvents[T]{},
 		limit:        maxCount,
+		traceConfig: bufferTraceOpts{
+			writeSpan: "Buffer.Write",
+		},
 	}
+	for _, o := range opts {
+		o(b)
+	}
+
+	return b
 }
 
 func (s *Buffer[T]) Write(parent context.Context, value T) error {
-	ctx, span := tracing.Start(parent, "Buffer.Write", trace.WithAttributes(attribute.Stringer("state.write", s.writeState), attribute.Stringer("Buffer", ptrFormattedStringer[Buffer[T]]{s})))
+	ctx, span := tracing.Start(parent, s.traceConfig.writeSpan, trace.WithAttributes(
+		attribute.Stringer("state.write", s.writeState),
+		attribute.Stringer("state.read", s.readState),
+		attribute.Stringer("Buffer", ptrFormattedStringer[Buffer[T]]{s}),
+	))
+	defer span.End()
 
 	switch s.writeState {
 	case bufferWritable:
