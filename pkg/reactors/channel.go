@@ -1,10 +1,14 @@
 package reactors
 
-import "context"
+import (
+	"context"
+	"go.opentelemetry.io/otel/trace"
+)
 
 // ChannelEvent is an opaque handle for relaying events back through the reactor from a channel receive.
 type ChannelEvent[S any] struct {
-	op TickEventStateFunc[S]
+	op      TickEventStateFunc[S]
+	invoker trace.SpanContext
 }
 
 // Channel is a Boundary implementation utilizing a chan as a work queue for execution.  When the driving event
@@ -31,8 +35,9 @@ func (c *Channel[S]) ScheduleFunc(ctx context.Context, operation TickEventFunc) 
 }
 
 func (c *Channel[S]) ScheduleStateFunc(ctx context.Context, operation TickEventStateFunc[S]) {
+	invoker := trace.SpanContextFromContext(ctx)
 	select {
-	case c.workQueue <- ChannelEvent[S]{op: operation}:
+	case c.workQueue <- ChannelEvent[S]{op: operation, invoker: invoker}:
 	case <-ctx.Done():
 	}
 }
@@ -55,5 +60,6 @@ func (c *Channel[S]) ConsumeAll(ctx context.Context, state S) (int, error) {
 }
 
 func (c *Channel[S]) Tick(ctx context.Context, event ChannelEvent[S], state S) error {
-	return InvokeStateOp[S](ctx, c, state, event.op)
+	tickContext := trace.ContextWithRemoteSpanContext(ctx, event.invoker)
+	return InvokeStateOp[S](tickContext, c, state, event.op)
 }
