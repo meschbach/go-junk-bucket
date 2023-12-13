@@ -74,9 +74,11 @@ func TestBufferStream(t *testing.T) {
 		source := NewBuffer[int](8)
 		sink := NewBuffer[int](8)
 
-		t.Run("When filling one stream", func(t *testing.T) {
+		t.Run("When filling source stream", func(t *testing.T) {
+			var expectedValues []int
 			for i := 0; i < 6; i++ {
 				require.NoError(t, source.Write(ctx, i))
+				expectedValues = append(expectedValues, i)
 			}
 
 			t.Run("And connecting it to the other", func(t *testing.T) {
@@ -84,14 +86,15 @@ func TestBufferStream(t *testing.T) {
 				require.NoError(t, err)
 
 				t.Run("Then it moves all buffered elements", func(t *testing.T) {
-					assert.Equal(t, []int{0, 1, 2, 3, 4, 5}, sink.Output)
+					assert.Equal(t, expectedValues, sink.Output)
 				})
 
 				t.Run("And another element is written", func(t *testing.T) {
 					require.NoError(t, source.Write(ctx, 6))
+					expectedValues = append(expectedValues, 6)
 
 					t.Run("Then it is passed to the sink", func(t *testing.T) {
-						assert.Equal(t, []int{0, 1, 2, 3, 4, 5, 6}, sink.Output)
+						assert.Equal(t, expectedValues, sink.Output)
 					})
 				})
 
@@ -100,7 +103,10 @@ func TestBufferStream(t *testing.T) {
 
 					t.Run("Then another written element is not transmitted", func(t *testing.T) {
 						require.NoError(t, source.Write(ctx, 7))
-						assert.Equal(t, []int{0, 1, 2, 3, 4, 5, 6}, sink.Output)
+						values := make([]int, 64)
+						count, err := sink.ReadSlice(ctx, values)
+						require.NoError(t, err)
+						assert.Equal(t, expectedValues, values[0:count])
 					})
 				})
 			})
