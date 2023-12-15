@@ -4,7 +4,7 @@ import (
 	"context"
 )
 
-// SliceAccumulator is a Sink for storing T in Output.  Once Finish is called OnFinished handlers will be notified.
+// SliceAccumulator is a Sink for storing T in Output.  Once Finish is called Finished event will be emitted.
 type SliceAccumulator[T any] struct {
 	Output []T
 	Done   bool
@@ -30,7 +30,7 @@ func (s *SliceAccumulator[T]) Finish(ctx context.Context) error {
 		return nil
 	}
 	s.Done = true
-	return s.Events.OnFinished.Emit(ctx, s)
+	return s.Events.Finished.Emit(ctx, s)
 }
 
 func (s *SliceAccumulator[T]) SinkEvents() *SinkEvents[T] {
@@ -38,5 +38,5 @@ func (s *SliceAccumulator[T]) SinkEvents() *SinkEvents[T] {
 }
 
 func (s *SliceAccumulator[T]) Resume(ctx context.Context) error {
-	return s.Events.OnDrain.Emit(ctx, s)
+	return s.Events.Drained.Emit(ctx, s)
 }

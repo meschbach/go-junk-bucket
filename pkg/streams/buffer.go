@@ -93,6 +93,22 @@ func NewBuffer[T any](maxCount int, opts ...BufferOpt[T]) *Buffer[T] {
 	return b
 }
 
+func (s *Buffer[T]) writePausedBuffer(ctx context.Context, value T) error {
+	//Already full, outright reject the overflow
+	if len(s.Output) >= s.limit {
+		return Overflow
+	}
+
+	s.Output = append(s.Output, value)
+	if len(s.Output) >= s.limit {
+		if err := s.sinkEvents.Full.Emit(ctx, s); err != nil {
+			return err
+		}
+		return Full
+	}
+	return nil
+}
+
 func (s *Buffer[T]) Write(parent context.Context, value T) error {
 	ctx, span := tracing.Start(parent, s.traceConfig.writeSpan, trace.WithAttributes(
 		attribute.Stringer("state.write", s.writeState),
@@ -105,22 +121,21 @@ func (s *Buffer[T]) Write(parent context.Context, value T) error {
 	case bufferWritable:
 		switch s.readState {
 		case bufferPaused:
-			if len(s.Output) >= s.limit {
-				span.AddEvent("full")
-				return Full
-			}
-			s.Output = append(s.Output, value)
-			span.AddEvent("buffered")
+			return s.writePausedBuffer(ctx, value)
 		case bufferFlowing:
 			span.AddEvent("flowing")
 			if err := s.sourceEvents.Data.Emit(ctx, value); err != nil {
 				if errors.Is(err, Full) {
-					span.AddEvent("destinations-full")
-					s.Output = append(s.Output, value)
 					s.readState = bufferPaused
+					if len(s.Output) == s.limit {
+						return Full
+					} else {
+						return nil
+					}
+				} else if errors.Is(err, Overflow) {
+					panic("transitioned to overflow without full")
 				} else {
 					span.SetStatus(codes.Error, "source dispatch failed")
-					span.RecordError(err)
 					return err
 				}
 			}
@@ -166,10 +181,11 @@ func (s *Buffer[T]) Resume(ctx context.Context) error {
 		return End
 	case bufferFlowing:
 		return nil
+	case bufferPaused: //transition out
 	}
 	for {
 		if len(s.Output) == 0 {
-			if err := s.sinkEvents.OnDrain.Emit(ctx, s); err != nil {
+			if err := s.sinkEvents.Drained.Emit(ctx, s); err != nil {
 				return err
 			}
 			//check again, as Drain emission may have inserted more elements into our buffer
@@ -184,9 +200,8 @@ func (s *Buffer[T]) Resume(ctx context.Context) error {
 			}
 		}
 		e := s.Output[0]
-		if err := s.sourceEvents.Data.Emit(ctx, e); err == nil {
-			s.Output = s.Output[1:]
-		} else {
+		s.Output = s.Output[1:]
+		if err := s.sourceEvents.Data.Emit(ctx, e); err != nil {
 			return err
 		}
 	}
@@ -197,32 +212,73 @@ func (s *Buffer[T]) SourceEvents() *SourceEvents[T] {
 }
 
 func (s *Buffer[T]) ReadSlice(ctx context.Context, to []T) (int, error) {
+	//Are we in a valid state to continue?
 	switch s.readState {
 	case bufferDone:
 		return 0, End
+	case bufferFlowing: //programming error
+		return 0, errors.New("flowing")
+	case bufferPaused: //expected state to actually allow reads
 	}
 
-	if s.Output == nil {
-		return 0, nil
-	}
-
-	count := copy(to, s.Output)
-	if count == len(s.Output) {
-		s.Output = nil
-		switch s.writeState {
-		case bufferFinishing:
-			return count, s.finishedFinalDrain(ctx)
+	countRead := 0
+	for countRead < len(to) {
+		//ensure we have not yet changed states.
+		if s.readState != bufferPaused {
+			break
 		}
-	} else {
-		s.Output = s.Output[count:]
-	}
 
-	return count, nil
+		//Buffer drained?  Solicit input!
+		if len(s.Output) == 0 {
+			if s.writeState == bufferWritable { //still writing?
+				if err := s.sinkEvents.Drained.Emit(ctx, s); err != nil {
+					return countRead, err
+				}
+			}
+			//do we still not have elements?
+			if len(s.Output) == 0 {
+				if countRead == 0 {
+					return 0, UnderRun
+				} else {
+					return countRead, nil
+				}
+			}
+		}
+
+		//We have data, read it into the target buffer
+		copiedCount := copy(to[countRead:], s.Output)
+		s.Output = s.Output[copiedCount:]
+		countRead += copiedCount
+	}
+	if s.writeState == bufferWritable {
+		err := s.sinkEvents.Available.Emit(ctx, SinkAvailableEvent[T]{
+			Space: s.limit - len(s.Output),
+			Sink:  s,
+		})
+		return countRead, err
+	} else {
+		return countRead, nil
+	}
+}
+
+// drainedOnRead emits the Drained event to notify possible listeners our buffer has under run.
+func (s *Buffer[T]) drainedOnRead(ctx context.Context) error {
+	if err := s.sinkEvents.Drained.Emit(ctx, s); err != nil {
+		if errors.Is(err, Full) {
+			err = nil
+		}
+		return err
+	}
+	if len(s.Output) > 0 {
+		return nil
+	} else {
+		return UnderRun
+	}
 }
 
 func (s *Buffer[T]) startFinalDrain(ctx context.Context) error {
 	s.writeState = bufferFinishing
-	finishingError := s.sinkEvents.OnFinishing.Emit(ctx, s)
+	finishingError := s.sinkEvents.Finishing.Emit(ctx, s)
 
 	var finalDrainError error
 	if len(s.Output) == 0 {
@@ -237,7 +293,7 @@ func (s *Buffer[T]) finishedFinalDrain(ctx context.Context) error {
 	}
 
 	s.writeState = bufferFinished
-	finishedError := s.sinkEvents.OnFinished.Emit(ctx, s)
+	finishedError := s.sinkEvents.Finished.Emit(ctx, s)
 
 	s.readState = bufferDone
 	endError := s.sourceEvents.End.Emit(ctx, s)

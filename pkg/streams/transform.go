@@ -37,10 +37,10 @@ func NewTransform[I any, O any](fn TransformerFunc[I, O]) *Transformer[I, O] {
 //
 // Deprecated: Use Connect as it has better test coverage and less specific
 func (t *Transformer[I, O]) Pump(ctx context.Context, source Source[I], target Sink[O]) error {
-	target.SinkEvents().OnDrain.OnE(func(ctx context.Context, event Sink[O]) error {
+	target.SinkEvents().Drained.OnE(func(ctx context.Context, event Sink[O]) error {
 		return t.Resume(ctx)
 	})
-	t.sinkEvents.OnDrain.OnE(func(ctx context.Context, event Sink[I]) error {
+	t.sinkEvents.Drained.OnE(func(ctx context.Context, event Sink[I]) error {
 		return source.Resume(ctx)
 	})
 	t.sourceEvents.Data.OnE(func(ctx context.Context, event O) error {
@@ -61,7 +61,7 @@ func (t *Transformer[I, O]) Resume(ctx context.Context) error {
 	if err := t.pumpInternal(ctx); err != nil {
 		return err
 	}
-	return t.sinkEvents.OnDrain.Emit(ctx, t)
+	return t.sinkEvents.Drained.Emit(ctx, t)
 }
 
 func (t *Transformer[I, O]) Pause(ctx context.Context) error {
@@ -132,7 +132,7 @@ func (t *Transformer[I, O]) Finish(ctx context.Context) error {
 	}
 	t.state = TransformerFinished
 	//todo: should only be emitted after it is completed
-	return t.sinkEvents.OnFinished.Emit(ctx, t)
+	return t.sinkEvents.Finished.Emit(ctx, t)
 }
 
 func (t *Transformer[I, O]) SinkEvents() *SinkEvents[I] {

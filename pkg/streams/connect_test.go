@@ -2,7 +2,6 @@ package streams
 
 import (
 	"context"
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -14,26 +13,37 @@ func TestConnect(t *testing.T) {
 		ctx, done := context.WithTimeout(context.Background(), 1*time.Second)
 		t.Cleanup(done)
 
-		source := NewBuffer[int](8)
-		sink := NewBuffer[int](8)
+		inputBuffer := NewBuffer[int](8, WithBufferTracePrefix[int]("input"))
+		outputBuffer := NewBuffer[int](8, WithBufferTracePrefix[int]("output"))
 
-		_, err := Connect[int](ctx, source, sink)
+		_, err := Connect[int](ctx, inputBuffer, outputBuffer)
 		require.NoError(t, err)
-		exampleValues := []int{0, 1, 2, 3, 4, 5, 6, 7}
-		for _, v := range exampleValues {
-			require.NoError(t, source.Write(ctx, v))
-		}
 
-		t.Run("When finishing the source", func(t *testing.T) {
-			require.NoError(t, source.Finish(ctx))
+		t.Run("When filling the input buffer", func(t *testing.T) {
+			exampleValues := []int{0, 1, 2, 3, 4, 5, 6, 7}
+			for _, v := range exampleValues {
+				require.NoError(t, inputBuffer.Write(ctx, v))
+			}
 
-			t.Run("Then the sink receives all elements", func(t *testing.T) {
-				assert.Equal(t, exampleValues, sink.Output)
+			t.Run("Then the values should move to the output buffer", func(t *testing.T) {
+				drained := make([]int, 32)
+				count, err := ReadAll[int](ctx, outputBuffer, drained, func(ctx2 context.Context, count int) (bool, error) {
+					return count != len(exampleValues), nil
+				})
+				require.NoError(t, err)
+
+				if assert.Equal(t, exampleValues, drained[:count], "expected values are read through") {
+					assert.Equal(t, len(exampleValues), count)
+				}
 			})
+		})
 
-			t.Run("Then the sink is also finished", func(t *testing.T) {
-				assert.Equal(t, bufferFinishing, sink.writeState, fmt.Sprintf("target write state should be finishing, got %s", sink.writeState))
-			})
+		t.Run("When the input buffer with an empty output buffer is closed", func(t *testing.T) {
+			require.NoError(t, inputBuffer.Finish(ctx))
+			drainedValues := make([]int, 32)
+			count, err := outputBuffer.ReadSlice(ctx, drainedValues)
+			require.ErrorIs(t, err, End, "end is propagated")
+			assert.Equal(t, 0, count, "no elements are read")
 		})
 	})
 }

@@ -45,6 +45,7 @@ type ConnectedPipe[E any] struct {
 
 	onSourceData     *emitter.Subscription[E]
 	onSourceFinished *emitter.Subscription[Source[E]]
+	full             *emitter.Subscription[Sink[E]]
 	drain            *emitter.Subscription[Sink[E]]
 	config           connectedPipeConfig
 }
@@ -59,7 +60,10 @@ func (c *ConnectedPipe[E]) Close(ctx context.Context) error {
 	sourceEvents := c.from.SourceEvents()
 	sourceEvents.Data.Off(c.onSourceData)
 	sourceEvents.End.Off(c.onSourceFinished)
-	c.sink.SinkEvents().OnDrain.Off(c.drain)
+
+	sinkEvents := c.sink.SinkEvents()
+	sinkEvents.Drained.Off(c.drain)
+	sinkEvents.Full.Off(c.full)
 	return nil
 }
 
@@ -86,7 +90,8 @@ func Connect[E any](ctx context.Context, from Source[E], to Sink[E], opts ...Con
 	pipe.onSourceData = sourceEvents.Data.OnE(func(ctx context.Context, event E) error {
 		span := trace.SpanFromContext(ctx)
 		span.AddEvent(pipe.config.traceEventPrefix+".Source.Data", attrs)
-		return to.Write(ctx, event)
+		writeErr := to.Write(ctx, event)
+		return writeErr
 	})
 	pipe.onSourceFinished = sourceEvents.End.OnE(func(ctx context.Context, event Source[E]) error {
 		span := trace.SpanFromContext(ctx)
@@ -95,12 +100,22 @@ func Connect[E any](ctx context.Context, from Source[E], to Sink[E], opts ...Con
 	})
 
 	sinkEvents := to.SinkEvents()
-	pipe.drain = sinkEvents.OnDrain.OnE(func(ctx context.Context, event Sink[E]) error {
+	pipe.full = sinkEvents.Full.OnE(func(ctx context.Context, event Sink[E]) error {
 		span := trace.SpanFromContext(ctx)
-		span.AddEvent(pipe.config.traceEventPrefix+".Sink.OnDrain", attrs)
+		span.AddEvent(pipe.config.traceEventPrefix+".Sink.Full", attrs)
+		return from.Pause(ctx)
+	})
+	pipe.drain = sinkEvents.Drained.OnE(func(ctx context.Context, event Sink[E]) error {
+		span := trace.SpanFromContext(ctx)
+		span.AddEvent(pipe.config.traceEventPrefix+".Sink.Drain", attrs)
 
 		return from.Resume(ctx)
 	})
-
-	return pipe, from.Resume(ctx)
+	result := from.Resume(ctx)
+	if result != nil {
+		if result == Full || result == UnderRun {
+			result = nil
+		}
+	}
+	return pipe, result
 }

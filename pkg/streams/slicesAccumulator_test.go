@@ -13,7 +13,7 @@ func TestSliceAccumulator(t *testing.T) {
 
 		s := NewSliceAccumulator[int]()
 		hasFinished := false
-		s.Events.OnFinished.On(func(ctx context.Context, event Sink[int]) {
+		s.Events.Finished.On(func(ctx context.Context, event Sink[int]) {
 			hasFinished = true
 		})
 
