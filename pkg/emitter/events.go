@@ -14,7 +14,12 @@ type Listener[E any] func(ctx context.Context, event E)
 
 // Subscription represents a single listener bound to hear events
 type Subscription[E any] struct {
+	from   *Dispatcher[E]
 	target ListenerE[E]
+}
+
+func (s *Subscription[E]) Off() {
+	s.from.Off(s)
 }
 
 // Dispatcher manages a set of subscriptions and dispatching to those subscriptions.  Dispatcher is not thread or
@@ -27,6 +32,7 @@ type Dispatcher[E any] struct {
 func (e *Dispatcher[E]) OnE(l ListenerE[E]) *Subscription[E] {
 	sub := &Subscription[E]{
 		target: l,
+		from:   e,
 	}
 	e.listeners = append(e.listeners, sub)
 	return sub
