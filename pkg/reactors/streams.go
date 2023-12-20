@@ -2,6 +2,7 @@ package reactors
 
 import (
 	"context"
+	"errors"
 	"github.com/meschbach/go-junk-bucket/pkg/streams"
 )
 
@@ -43,10 +44,16 @@ func StreamBetween[E any, I any, O any](ctx context.Context, inputSide Boundary[
 		outputSide.ScheduleFunc(inputContext, func(outputContext context.Context) error {
 			VerifyWithinBoundary(outputContext, outputSide)
 			//todo: feedback and propagation of signals
-			return outputSource.Write(outputContext, event)
+			if err := outputSource.Write(outputContext, event); err != nil {
+				//todo: reivew the correctness here -- probably better to change to channel streams
+				if errors.Is(err, streams.Done) {
+					return nil
+				}
+			}
+			return nil
 		})
 	})
-	inputSink.SinkEvents().OnFinished.On(func(inputContext context.Context, s streams.Sink[E]) {
+	inputSink.SinkEvents().Finished.On(func(inputContext context.Context, s streams.Sink[E]) {
 		VerifyWithinBoundary[I](inputContext, inputSide)
 		outputSide.ScheduleFunc(inputContext, func(outputContext context.Context) error {
 			VerifyWithinBoundary[O](outputContext, outputSide)
