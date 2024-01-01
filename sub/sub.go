@@ -15,11 +15,13 @@ type Subcommand struct {
 	programName      string
 	programArguments []string
 	Options          []Option
+	changes          sync.Mutex
 	activeProcess    *exec.Cmd
 }
 
 func NewSubcommand(programName string, args []string) *Subcommand {
 	return &Subcommand{
+		changes:          sync.Mutex{},
 		programName:      programName,
 		programArguments: args,
 	}
@@ -32,6 +34,9 @@ func (s *Subcommand) WithOption(opt Option) {
 func (s *Subcommand) Interact(stdin <-chan string, stdout chan<- string, stderr chan<- string) error {
 	var completedReading sync.WaitGroup
 	var readyGate sync.WaitGroup
+
+	s.changes.Lock()
+	defer s.changes.Unlock()
 
 	cmd := exec.Command(s.programName, s.programArguments...)
 	for _, option := range s.Options {
@@ -101,6 +106,9 @@ func (s *Subcommand) Run(stdout chan<- string, stderr chan<- string) error {
 // NOTE: In the case of process cleanup this risks orphaning processes.  Use `WithProcGroup` option and `Kill` with that
 // instead.
 func (s *Subcommand) Kill() error {
+	s.changes.Lock()
+	defer s.changes.Unlock()
+
 	if s.activeProcess == nil {
 		fmt.Printf("no active process, ignoring...\n")
 		return nil
@@ -109,6 +117,9 @@ func (s *Subcommand) Kill() error {
 }
 
 func (s *Subcommand) SendSignal(signal os.Signal) error {
+	s.changes.Lock()
+	defer s.changes.Unlock()
+
 	if s.activeProcess == nil {
 		return nil
 	}
