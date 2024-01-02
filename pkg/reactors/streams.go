@@ -2,7 +2,6 @@ package reactors
 
 import (
 	"context"
-	"errors"
 	"github.com/meschbach/go-junk-bucket/pkg/streams"
 )
 
@@ -30,41 +29,24 @@ func WithStreamBetweenName(name string) StreamBetweenOpt {
 // Seems a bit strange to have this generated outside of the source boundary since the stream must be passed in.  In
 // practice this should generally be invoked by the coordinating builder common between both sides.
 func StreamBetween[E any, I any, O any](ctx context.Context, inputSide Boundary[I], outputSide Boundary[O], opts ...StreamBetweenOpt) (streams.Source[E], streams.Sink[E], error) {
+	//figure out options
 	cfg := streamBetweenConfig{}
 	cfg.init(opts)
 
-	//todo: this has many edge cases which will be paid off over time.
-	//arguably this procedure belongs in another package entirely since it is a union between reactors and streams
-	inputSink := streams.NewBuffer[E](32, streams.WithBufferTracePrefix[E](cfg.name+".sink"))
-	outputSource := streams.NewBuffer[E](32, streams.WithBufferTracePrefix[E](cfg.name+".source"))
+	//
+	port := streams.NewChannelPort[E](32)
 
-	inputEvents := inputSink.SourceEvents()
-	inputEvents.Data.On(func(inputContext context.Context, event E) {
-		VerifyWithinBoundary(inputContext, inputSide)
-		outputSide.ScheduleFunc(inputContext, func(outputContext context.Context) error {
-			VerifyWithinBoundary(outputContext, outputSide)
-			//todo: feedback and propagation of signals
-			if err := outputSource.Write(outputContext, event); err != nil {
-				//todo: reivew the correctness here -- probably better to change to channel streams
-				if errors.Is(err, streams.Done) {
-					return nil
-				}
-			}
-			return nil
-		})
-	})
-	inputSink.SinkEvents().Finished.On(func(inputContext context.Context, s streams.Sink[E]) {
-		VerifyWithinBoundary[I](inputContext, inputSide)
-		outputSide.ScheduleFunc(inputContext, func(outputContext context.Context) error {
-			VerifyWithinBoundary[O](outputContext, outputSide)
-			//todo: feedback and propagation of signals
-			return outputSource.Finish(outputContext)
-		})
-	})
+	outputSource := port.Output
+	inputSink := port.Input
 
-	inputSide.ScheduleFunc(ctx, func(ctx context.Context) error {
-		return inputSink.Resume(ctx)
-	})
+	//todo: feedback mechanism should be pluggable so we can avoid an extra goroutine
+	go func() {
+		for event := range port.Feedback {
+			inputSide.ScheduleFunc(ctx, func(ctx context.Context) error {
+				return inputSink.ConsumeEvent(ctx, event)
+			})
+		}
+	}()
 
 	return outputSource, inputSink, nil
 }

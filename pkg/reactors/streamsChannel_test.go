@@ -35,34 +35,27 @@ func TestStreamFromTickToChannel(t *testing.T) {
 	//tickedContext := WithReactor[int](testContext, ticked)
 
 	t.Run("When writing a value", func(t *testing.T) {
-		hasConsumedEvents := false
-		tickedInput.SourceEvents().Data.On(func(ctx context.Context, event int) {
-			VerifyWithinBoundary[int](ctx, ticked)
-			invokingReactor, has := Maybe[int](ctx)
-			if assert.True(t, has, "expected invoking reactor setup properly") {
-				assert.Equal(t, ticked, invokingReactor)
-			}
-			hasConsumedEvents = true
-		})
 		outputBuffer := streams.NewBuffer[int](32)
 		_, err := streams.Connect[int](testContext, tickedInput, outputBuffer)
 		require.NoError(t, err, "connecting source pipe to output buffer")
 
+		readOperation := sync.WaitGroup{}
+		readOperation.Add(1)
 		sourceReactor.ScheduleFunc(testContext, func(ctx context.Context) error {
 			VerifyWithinBoundary[int](ctx, sourceReactor)
+			defer readOperation.Done()
 			return sourceReactorOutput.Write(ctx, 42)
 		})
 
-		for !hasConsumedEvents {
-			hasMore, err := ticked.Tick(testContext, 32, 0)
-			require.NoError(t, err)
-			assert.False(t, hasMore)
-		}
+		readOperation.Wait()
+		outputSideCount, err := ticked.Tick(testContext, 32, 1)
+		require.NoError(t, err)
+		assert.False(t, outputSideCount)
 
 		t.Run("Then the output should receive the value", func(t *testing.T) {
 			values := make([]int, 32)
 			count, err := outputBuffer.ReadSlice(testContext, values)
-			require.NoError(t, err)
+			require.NoError(t, err, "Output: %#v\n", values[0:count])
 			if assert.Equal(t, 1, count, "expected to read 1 value") {
 				assert.Equal(t, 42, values[0])
 			}
@@ -80,11 +73,11 @@ func TestStreamFromTickToChannel(t *testing.T) {
 			require.NoError(t, err)
 			require.False(t, remaining, "no waiting functions should remain")
 
-			t.Run("Then the stream event is propagated", func(t *testing.T) {
+			t.Run("Then the stream finished is propagated", func(t *testing.T) {
 				values := make([]int, 32)
 				count, err := outputBuffer.ReadSlice(testContext, values)
 				assert.Equal(t, 0, count, "no elements should be read")
-				assert.Equal(t, streams.End, err)
+				assert.Same(t, streams.End, err, "Expected error to state done: %s\n", err.Error())
 			})
 		})
 	})

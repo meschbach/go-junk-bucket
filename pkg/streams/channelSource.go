@@ -45,6 +45,9 @@ func (c *ChannelSource[T]) ReadSlice(ctx context.Context, to []T) (i int, err er
 				i++
 				keepReading = targetSize > i
 			} else {
+				if c.feedback != nil {
+					close(c.feedback)
+				}
 				return i, End
 			}
 		default:
@@ -86,8 +89,11 @@ func (c *ChannelSource[T]) WaitOnEvent(ctx context.Context) error {
 				}
 			}
 		} else {
-			//todo: end
-			return nil
+			endError := c.events.End.Emit(ctx, c)
+			if c.feedback != nil {
+				close(c.feedback)
+			}
+			return endError
 		}
 	}
 	return nil
@@ -112,7 +118,15 @@ func (c *ChannelSource[T]) PumpTick(ctx context.Context) (count int, err error) 
 					return count, err
 				}
 			} else {
-				return count, End
+				problem := c.events.End.Emit(ctx, c)
+				if c.feedback != nil {
+					close(c.feedback)
+				}
+				outErr := End
+				if problem != nil {
+					outErr = errors.Join(outErr, problem)
+				}
+				return count, outErr
 			}
 		default:
 			hasData = false
