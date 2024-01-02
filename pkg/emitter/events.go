@@ -80,5 +80,9 @@ func (e *Dispatcher[E]) Emit(ctx context.Context, event E) error {
 			problems = append(problems, err)
 		}
 	}
-	return errors.Join(problems...)
+	if len(problems) == 1 {
+		return problems[0]
+	} else {
+		return errors.Join(problems...)
+	}
 }
