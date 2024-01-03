@@ -23,9 +23,17 @@ func WithTracePrefix(tracePrefix string) ConnectedPipeOption {
 	}
 }
 
+func WithSuppressEnd() ConnectedPipeOption {
+	return func(c *connectedPipeConfig) error {
+		c.suppressEnd = true
+		return nil
+	}
+}
+
 type connectedPipeConfig struct {
 	traceAttributes  []attribute.KeyValue
 	traceEventPrefix string
+	suppressEnd      bool
 }
 
 func (c *connectedPipeConfig) init(opts []ConnectedPipeOption) error {
@@ -59,7 +67,9 @@ func (c *ConnectedPipe[E]) Close(ctx context.Context) error {
 	}
 	sourceEvents := c.from.SourceEvents()
 	sourceEvents.Data.Off(c.onSourceData)
-	sourceEvents.End.Off(c.onSourceFinished)
+	if !c.config.suppressEnd {
+		sourceEvents.End.Off(c.onSourceFinished)
+	}
 
 	sinkEvents := c.sink.SinkEvents()
 	sinkEvents.Drained.Off(c.drain)
@@ -93,11 +103,13 @@ func Connect[E any](ctx context.Context, from Source[E], to Sink[E], opts ...Con
 		writeErr := to.Write(ctx, event)
 		return writeErr
 	})
-	pipe.onSourceFinished = sourceEvents.End.OnE(func(ctx context.Context, event Source[E]) error {
-		span := trace.SpanFromContext(ctx)
-		span.AddEvent(pipe.config.traceEventPrefix+".Source.End", attrs)
-		return to.Finish(ctx)
-	})
+	if !pipe.config.suppressEnd {
+		pipe.onSourceFinished = sourceEvents.End.OnE(func(ctx context.Context, event Source[E]) error {
+			span := trace.SpanFromContext(ctx)
+			span.AddEvent(pipe.config.traceEventPrefix+".Source.End", attrs)
+			return to.Finish(ctx)
+		})
+	}
 
 	sinkEvents := to.SinkEvents()
 	pipe.full = sinkEvents.Full.OnE(func(ctx context.Context, event Sink[E]) error {
@@ -109,7 +121,11 @@ func Connect[E any](ctx context.Context, from Source[E], to Sink[E], opts ...Con
 		span := trace.SpanFromContext(ctx)
 		span.AddEvent(pipe.config.traceEventPrefix+".Sink.Drain", attrs)
 
-		return from.Resume(ctx)
+		result := from.Resume(ctx)
+		if pipe.config.suppressEnd && result == End {
+			result = nil
+		}
+		return result
 	})
 	result := from.Resume(ctx)
 	if result != nil {
