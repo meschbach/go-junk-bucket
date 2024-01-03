@@ -67,11 +67,13 @@ type BufferOpt[T any] func(b *Buffer[T])
 func WithBufferTracePrefix[T any](prefix string) BufferOpt[T] {
 	return func(b *Buffer[T]) {
 		b.traceConfig.writeSpan = prefix + ".Write"
+		b.traceConfig.readSlice = prefix + ".ReadSlice"
 	}
 }
 
 type bufferTraceOpts struct {
 	writeSpan string
+	readSlice string
 }
 
 // NewBuffer creates a new Buffer with the specified maxCount as the limit
@@ -84,6 +86,7 @@ func NewBuffer[T any](maxCount int, opts ...BufferOpt[T]) *Buffer[T] {
 		limit:        maxCount,
 		traceConfig: bufferTraceOpts{
 			writeSpan: "Buffer.Write",
+			readSlice: "Buffer.ReadSlice",
 		},
 	}
 	for _, o := range opts {
@@ -113,7 +116,6 @@ func (s *Buffer[T]) Write(parent context.Context, value T) error {
 	ctx, span := tracing.Start(parent, s.traceConfig.writeSpan, trace.WithAttributes(
 		attribute.Stringer("state.write", s.writeState),
 		attribute.Stringer("state.read", s.readState),
-		attribute.Stringer("Buffer", ptrFormattedStringer[Buffer[T]]{s}),
 	))
 	defer span.End()
 
@@ -211,7 +213,13 @@ func (s *Buffer[T]) SourceEvents() *SourceEvents[T] {
 	return s.sourceEvents
 }
 
-func (s *Buffer[T]) ReadSlice(ctx context.Context, to []T) (int, error) {
+func (s *Buffer[T]) ReadSlice(parent context.Context, to []T) (int, error) {
+	ctx, span := tracing.Start(parent, s.traceConfig.readSlice, trace.WithAttributes(
+		attribute.Stringer("state.write", s.writeState),
+		attribute.Stringer("state.read", s.readState),
+	))
+	defer span.End()
+
 	//Are we in a valid state to continue?
 	switch s.readState {
 	case bufferDone:
@@ -230,7 +238,9 @@ func (s *Buffer[T]) ReadSlice(ctx context.Context, to []T) (int, error) {
 
 		//Buffer drained?  Solicit input!
 		if len(s.Output) == 0 {
+			span.AddEvent("buffer empty")
 			if s.writeState == bufferWritable { //still writing?
+				span.AddEvent("writable")
 				if err := s.sinkEvents.Drained.Emit(ctx, s); err != nil {
 					return countRead, err
 				}
@@ -238,8 +248,10 @@ func (s *Buffer[T]) ReadSlice(ctx context.Context, to []T) (int, error) {
 			//do we still not have elements?
 			if len(s.Output) == 0 {
 				if countRead == 0 {
+					span.AddEvent("under run")
 					return 0, UnderRun
 				} else {
+					span.AddEvent("filled buffer")
 					return countRead, nil
 				}
 			}
@@ -251,6 +263,7 @@ func (s *Buffer[T]) ReadSlice(ctx context.Context, to []T) (int, error) {
 		countRead += copiedCount
 	}
 	if s.writeState == bufferWritable {
+		span.AddEvent("writable")
 		err := s.sinkEvents.Available.Emit(ctx, SinkAvailableEvent[T]{
 			Space: s.limit - len(s.Output),
 			Sink:  s,
