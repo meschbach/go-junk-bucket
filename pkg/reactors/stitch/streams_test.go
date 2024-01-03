@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/meschbach/go-junk-bucket/pkg/reactors"
+	"github.com/meschbach/go-junk-bucket/pkg/streams"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/thejerf/suture/v4"
@@ -53,7 +54,7 @@ func TestStreamBetween(t *testing.T) {
 					require.NoError(t, err)
 
 					count, err = source.ReadSlice(timed, out)
-					require.NoError(t, err)
+					assert.ErrorIs(t, err, streams.UnderRun)
 				}
 
 				if assert.Equal(t, 1, count) {

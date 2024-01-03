@@ -29,34 +29,12 @@ func TestStreamThroughBoundary(t *testing.T) {
 			require.NoError(t, sink.Write(originWellContext, exampleValue))
 			output := make([]int, 10)
 
-			t.Run("Then the value is not available", func(t *testing.T) {
+			t.Run("Then the value is available by read", func(t *testing.T) {
 				count, err := source.ReadSlice(outputWellContext, output)
-				require.NoError(t, err)
-				assert.Equal(t, 0, count)
-			})
-
-			t.Run("And the source boundary is ticked forward", func(t *testing.T) {
-				_, err = originWell.Tick(timedTestContext, 10, &sourceState{})
-				require.NoError(t, err)
-
-				t.Run("Then the value is not available", func(t *testing.T) {
-					count, err := source.ReadSlice(outputWellContext, output)
-					require.NoError(t, err)
-					assert.Equal(t, 0, count)
-				})
-			})
-
-			t.Run("And the target boundary is moved forward", func(t *testing.T) {
-				_, err = outputWell.Tick(timedTestContext, 10, &targetState{})
-				require.NoError(t, err)
-
-				t.Run("Then the value is available", func(t *testing.T) {
-					count, err := source.ReadSlice(outputWellContext, output)
-					require.NoError(t, err)
-					if assert.Equal(t, 1, count) {
-						assert.Equal(t, exampleValue, output[0])
-					}
-				})
+				assert.ErrorIs(t, err, streams.UnderRun)
+				if assert.Equal(t, 1, count, "Then the count is correct") {
+					assert.Equal(t, exampleValue, output[0])
+				}
 			})
 
 			t.Run("And the source stream has reached its end", func(t *testing.T) {

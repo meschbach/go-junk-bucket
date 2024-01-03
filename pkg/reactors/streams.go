@@ -39,10 +39,23 @@ func StreamBetween[E any, I any, O any](ctx context.Context, inputSide Boundary[
 	outputSource := port.Output
 	inputSink := port.Input
 
+	inputSink.Push = func(ctx context.Context) error {
+		outputSide.ScheduleFunc(ctx, func(parent context.Context) error {
+			ctx, span := tracing.Start(parent, cfg.name+".consumer.feedback")
+			defer span.End()
+			_, err := outputSource.PumpTick(ctx)
+			return err
+		})
+		return nil
+	}
+
 	//todo: feedback mechanism should be pluggable so we can avoid an extra goroutine
 	go func() {
+		ctx := context.Background()
 		for event := range port.Feedback {
-			inputSide.ScheduleFunc(ctx, func(ctx context.Context) error {
+			inputSide.ScheduleFunc(ctx, func(parent context.Context) error {
+				ctx, span := tracing.Start(parent, cfg.name+".producer.feedback")
+				defer span.End()
 				return inputSink.ConsumeEvent(ctx, event)
 			})
 		}
