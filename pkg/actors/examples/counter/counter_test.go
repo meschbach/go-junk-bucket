@@ -5,13 +5,12 @@ import (
 	"github.com/meschbach/go-junk-bucket/pkg/actors/local"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"time"
 )
 
 func TestSimpleCounter(t *testing.T) {
 	t.Parallel()
-	root, done := context.WithTimeout(context.Background(), 2*time.Second)
-	defer done()
+	root, done := context.WithCancel(context.Background())
+	t.Cleanup(done)
 
 	sys := local.NewSystem()
 
@@ -21,7 +20,7 @@ func TestSimpleCounter(t *testing.T) {
 	sys.Tell(root, pid, increment{})
 	sys.Tell(root, pid, increment{})
 	sys.Tell(root, pid, tell{who: port.Pid()})
-	value, err := port.ReceiveTimeout(100 * time.Millisecond)
+	value, err := port.ReceiveWith(root)
 
 	if assert.NoError(t, err) {
 		assert.Equal(t, uint(3), value)

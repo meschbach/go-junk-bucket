@@ -85,6 +85,7 @@ func (s *system) Spawn(context context.Context, a actors.MessageActor, opts ...a
 
 	pid := s.nextPID()
 	r := &runtime{
+		changes:  sync.Mutex{},
 		system:   s,
 		self:     pid,
 		mailbox:  make(chan tracedDecorator, 16),
@@ -93,15 +94,17 @@ func (s *system) Spawn(context context.Context, a actors.MessageActor, opts ...a
 		names:    make(map[string]actors.Pid),
 		parent:   parent,
 	}
+	r.changes.Lock()
 	if s.root == nil {
 		s.root = r
 	}
+	if r.parent != nil && registerAs != nil {
+		r.parent.names[*registerAs] = pid
+	}
+	r.changes.Unlock()
+
 	for _, m := range monitoring {
 		r.submit(context, &startMonitoring{listener: m.Tell, what: m.Momento})
-	}
-	if r.parent != nil && registerAs != nil {
-		//TODO: verify this does not create a race condition
-		r.parent.names[*registerAs] = pid
 	}
 	r.told(context, &actors.Start{})
 	s.registerTarget(pid, r)

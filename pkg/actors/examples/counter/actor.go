@@ -1,6 +1,8 @@
 package counter
 
-import "github.com/meschbach/go-junk-bucket/pkg/actors"
+import (
+	"github.com/meschbach/go-junk-bucket/pkg/actors"
+)
 
 type counterActor struct {
 	count uint

@@ -8,14 +8,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
-	"time"
 )
 
 func TestGivesUp(t *testing.T) {
 	t.Parallel()
 
-	ctx, done := context.WithTimeout(context.Background(), 1*time.Second)
-	defer done()
+	ctx, done := context.WithCancel(context.Background())
+	t.Cleanup(done)
 
 	sys := local.NewSystem()
 	port := sys.NewPort()

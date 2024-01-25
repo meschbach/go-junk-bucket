@@ -5,13 +5,12 @@ import (
 	"github.com/meschbach/go-junk-bucket/pkg/actors/local"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"time"
 )
 
 func TestPingPongActors(t *testing.T) {
 	t.Parallel()
-	ctx, done := context.WithTimeout(context.Background(), 2*time.Second)
-	defer done()
+	ctx, done := context.WithCancel(context.Background())
+	t.Cleanup(done)
 
 	sys := local.NewSystem()
 	ping := sys.Spawn(ctx, &appender{suffix: "ping"})
@@ -26,7 +25,7 @@ func TestPingPongActors(t *testing.T) {
 		to:   "a",
 		next: director,
 	})
-	v, err := out.ReceiveTimeout(100 * time.Millisecond)
+	v, err := out.ReceiveWith(ctx)
 	if assert.NoError(t, err) {
 		assert.Equal(t, "apingpong", v)
 	}

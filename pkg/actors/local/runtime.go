@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"runtime/debug"
 	"strings"
+	"sync"
 )
 
 const TracerName = "git.meschbach.com/mee/junk/actors"
@@ -26,6 +27,7 @@ const (
 )
 
 type runtime struct {
+	changes    sync.Mutex
 	system     *system
 	self       actors.Pid
 	mailbox    chan tracedDecorator
@@ -41,11 +43,17 @@ func (r *runtime) told(from context.Context, m any) {
 }
 
 func (r *runtime) start() {
+	r.changes.Lock()
+	defer r.changes.Unlock()
+
 	r.state = runtimeStarting
 	go r.run()
 }
 
 func (r *runtime) done() {
+	r.changes.Lock()
+	defer r.changes.Unlock()
+
 	if r.state == runtimeDone {
 		return
 	}
@@ -56,6 +64,9 @@ func (r *runtime) done() {
 }
 
 func (r *runtime) submit(from context.Context, action runtimeMessage) {
+	r.changes.Lock()
+	defer r.changes.Unlock()
+
 	span := trace.SpanFromContext(from)
 	//TODO: crud optimistic locking...race conditions can occur
 	switch r.state {
@@ -74,13 +85,26 @@ func (r *runtime) run() {
 		r.done()
 	}()
 
-	r.state = runtimeRunning
+	r.startRunning()
 	for m := range r.mailbox {
-		if r.state != runtimeRunning {
+		if !r.isRunning() {
 			break
 		}
 		r.tick(m)
 	}
+}
+
+func (r *runtime) startRunning() {
+	r.changes.Lock()
+	defer r.changes.Unlock()
+
+	r.state = runtimeRunning
+}
+
+func (r *runtime) isRunning() bool {
+	r.changes.Lock()
+	defer r.changes.Unlock()
+	return r.state == runtimeRunning
 }
 
 var tracer = otel.Tracer(TracerName)
