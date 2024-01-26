@@ -12,10 +12,8 @@ func TestAsyncWork(t *testing.T) {
 	t.Run("Given two reactors", func(t *testing.T) {
 		ctx, done := context.WithCancel(context.Background())
 		t.Cleanup(done)
-		reactorCtx, timerDone := context.WithTimeout(ctx, 1*time.Second)
-		t.Cleanup(timerDone)
 		reactorA := &Ticked[int]{}
-		reactorB := RunChannelActor(reactorCtx, 42)
+		reactorB := RunChannelActor(ctx, 42)
 
 		t.Run("When a promise resolves", func(t *testing.T) {
 			async := Submit[int, int, int](ctx, reactorA, reactorB, func(boundaryContext context.Context, state int) (int, error) {
