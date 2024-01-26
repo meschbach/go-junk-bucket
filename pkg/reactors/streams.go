@@ -53,10 +53,11 @@ func StreamBetween[E any, I any, O any](ctx context.Context, inputSide Boundary[
 	go func() {
 		ctx := context.Background()
 		for event := range port.Feedback {
+			eventCopy := event
 			inputSide.ScheduleFunc(ctx, func(parent context.Context) error {
 				ctx, span := tracing.Start(parent, cfg.name+".producer.feedback")
 				defer span.End()
-				return inputSink.ConsumeEvent(ctx, event)
+				return inputSink.ConsumeEvent(ctx, eventCopy)
 			})
 		}
 	}()
