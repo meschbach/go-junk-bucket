@@ -42,6 +42,8 @@ func (c *Channel[S]) ScheduleStateFunc(ctx context.Context, operation TickEventS
 	}
 }
 
+// ConsumeAll will consume all pending messages from the work queue until empty then return.  If the invoking context
+// is canceled prior to completion then routine will exit early.
 func (c *Channel[S]) ConsumeAll(ctx context.Context, state S) (int, error) {
 	count := 0
 	for {
@@ -59,6 +61,7 @@ func (c *Channel[S]) ConsumeAll(ctx context.Context, state S) (int, error) {
 	}
 }
 
+// Tick will dispatch the requested event within the context of this reactor.
 func (c *Channel[S]) Tick(ctx context.Context, event ChannelEvent[S], state S) error {
 	tickContext := trace.ContextWithRemoteSpanContext(ctx, event.invoker)
 	return InvokeStateOp[S](tickContext, c, state, event.op)
