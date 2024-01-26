@@ -10,29 +10,15 @@ import (
 	"time"
 )
 
-func executeReactor(t *testing.T, ctx context.Context, reactor *Channel[int], reactorQueue <-chan ChannelEvent[int]) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case e := <-reactorQueue:
-			err := reactor.Tick(ctx, e, 0)
-			require.NoError(t, err)
-		}
-	}
-}
-
 func TestStreamFromTickToChannel(t *testing.T) {
 	testContext, done := context.WithTimeout(context.Background(), 1*time.Second)
 	t.Cleanup(done)
 
-	sourceReactor, sourceReactorQueue := NewChannel[int](8)
-	go executeReactor(t, testContext, sourceReactor, sourceReactorQueue)
+	sourceReactor := RunChannelActor[int](testContext, 0)
 
 	ticked := &Ticked[int]{}
 	tickedInput, sourceReactorOutput, err := StreamBetween[int, int, int](testContext, sourceReactor, ticked)
 	require.NoError(t, err)
-	//tickedContext := WithReactor[int](testContext, ticked)
 
 	t.Run("When writing a value", func(t *testing.T) {
 		outputBuffer := streams.NewBuffer[int](32)
