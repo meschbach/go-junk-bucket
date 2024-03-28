@@ -6,3 +6,6 @@ bin:
 
 clean:
 	rm -fR bin
+
+test:
+	go test -count 1 --timeout 10s ./pkg/... ./sub/...
