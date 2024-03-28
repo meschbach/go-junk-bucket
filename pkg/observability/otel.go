@@ -2,16 +2,9 @@ package observability
 
 import (
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/jaeger"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 )
-
-func newJaegerExporter(url string) (trace.SpanExporter, error) {
-	// Create the Jaeger exporter
-	return jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint(url)))
-}
 
 // newResource returns a resource describing this application.
 func newResource(cfg Config) *resource.Resource {

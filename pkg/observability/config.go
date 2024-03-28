@@ -2,6 +2,7 @@ package observability
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/meschbach/go-junk-bucket/pkg"
 	"go.opentelemetry.io/otel"
@@ -47,11 +48,7 @@ func (c Config) Start(setup context.Context) (*Component, error) {
 	case "stdout":
 		exp, err = stdouttrace.New(stdouttrace.WithPrettyPrint())
 	case "jaeger":
-		jaegerEndpoint := pkg.EnvOrDefault("JAEGER_ENDPOINT", "http://localhost:14268/api/traces")
-		if !c.Silent {
-			fmt.Printf("Using %q for Jaeger endpoint\n", jaegerEndpoint)
-		}
-		exp, err = newJaegerExporter(jaegerEndpoint)
+		return nil, errors.New("Jaeger exporter is deprecated, switch to grpc.")
 	case "grpc":
 		exp, err = otlptracegrpc.New(setup)
 		if err != nil {
