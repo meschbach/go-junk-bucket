@@ -21,7 +21,7 @@ jobs:
           go test -race ./...
 
   maybe_release:
-    if: "${{ github.event.pull_request.merged == true && contains(github.ref, 'main') }}"
+    if: "${{ contains(github.ref, 'main') }}"
     needs:
     - build_test
     runs-on: ubuntu-latest
