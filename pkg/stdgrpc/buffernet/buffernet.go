@@ -27,11 +27,14 @@ func New() *BufferTransport {
 
 // Connect establishes a connection to the listening service via the buffer.  Will block until the connection is
 // established.
-func (b *BufferTransport) Connect(ctx context.Context) (conn *grpc.ClientConn, problem error) {
+func (b *BufferTransport) Connect(ctx context.Context, opts ...grpc.DialOption) (conn *grpc.ClientConn, problem error) {
 	dialer := func(ctx context.Context, _ string) (net.Conn, error) {
 		return b.Listener.DialContext(ctx)
 	}
-	return grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(dialer), grpc.WithInsecure(), grpc.WithBlock())
+	opts = append(opts, grpc.WithContextDialer(dialer))
+	opts = append(opts, grpc.WithInsecure())
+	opts = append(opts, grpc.WithBlock())
+	return grpc.DialContext(ctx, "bufnet", opts...)
 }
 
 func (b *BufferTransport) Listen(server *grpc.Server) error {
