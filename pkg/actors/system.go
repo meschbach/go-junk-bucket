@@ -4,7 +4,7 @@ import (
 	"context"
 )
 
-//Ingestor is capable of dispatching messages to pids
+// Ingestor is capable of dispatching messages to pids
 type Ingestor interface {
 	//Tell sends m to p.  If p is not alive or does not exist then the runtime will panic within this actor.
 	Tell(p Pid, m any)
@@ -14,7 +14,7 @@ type MessageActor interface {
 	OnMessage(r Runtime, m any)
 }
 
-//System is intended to represent an entire node
+// System is intended to represent an entire node
 type System interface {
 	Tell(ctx context.Context, p Pid, m any)
 	//NewPort creates a local port on the system

@@ -2,8 +2,8 @@ package actors
 
 import "context"
 
-//Runtime represents the world from teh point of view of an actor.  Actors must use this interface to work within the
-//actor system.
+// Runtime represents the world from teh point of view of an actor.  Actors must use this interface to work within the
+// actor system.
 type Runtime interface {
 	Ingestor
 	//Self results in the Pid of the executing actor

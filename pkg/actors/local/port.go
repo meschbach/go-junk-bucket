@@ -69,7 +69,7 @@ func (p *port) ReceiveWith(ctx context.Context) (any, error) {
 	}
 }
 
-//TODO: tracing -- is it feasible to do here?
+// TODO: tracing -- is it feasible to do here?
 func (p *port) told(from context.Context, m any) {
 	if v := atomic.LoadUint32(&p.state); v == portOpen {
 		p.mailbox <- m

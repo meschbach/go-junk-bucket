@@ -169,7 +169,7 @@ func (r *runtime) namedParts() []string {
 	}
 }
 
-//findForName locates the name for p within this actor.  If no name may be found "<annoymous>" is returned.
+// findForName locates the name for p within this actor.  If no name may be found "<annoymous>" is returned.
 func (r *runtime) findNameFor(p actors.Pid) string {
 	for name, pid := range r.names {
 		if pid == p {
@@ -200,7 +200,7 @@ func (u *userMessage) name() string {
 	return "message: " + reflect.TypeOf(u.m).String()
 }
 
-//https://devandchill.com/posts/2021/12/go-step-by-step-guide-for-implementing-tracing-on-a-microservices-architecture-2/2/
+// https://devandchill.com/posts/2021/12/go-step-by-step-guide-for-implementing-tracing-on-a-microservices-architecture-2/2/
 type tracedDecorator struct {
 	carrier map[string]string
 	next    runtimeMessage
@@ -234,7 +234,7 @@ func (t *tracedDecorator) baseContext(fromParent context.Context) context.Contex
 	return otel.GetTextMapPropagator().Extract(fromParent, t)
 }
 
-//TODO: really should become an envelope for the call
+// TODO: really should become an envelope for the call
 func (t *tracedDecorator) name() string {
 	return t.next.name()
 }

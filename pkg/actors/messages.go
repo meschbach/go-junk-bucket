@@ -1,9 +1,9 @@
 package actors
 
-//Start indicates the actor is starting execution and should perform any in actor initialization
+// Start indicates the actor is starting execution and should perform any in actor initialization
 type Start struct{}
 
-//PanicExit is a signal to indicate a monitored process has failed
+// PanicExit is a signal to indicate a monitored process has failed
 type PanicExit struct {
 	//Who is the actor which panicked
 	Who Pid
@@ -18,7 +18,7 @@ func NewPanicExit(who Pid, momento any) PanicExit {
 	return PanicExit{Who: who, Momento: momento}
 }
 
-//NormalExit indicates an actor exited with a given value
+// NormalExit indicates an actor exited with a given value
 type NormalExit struct {
 	//Who is the actor which exited
 	Who Pid

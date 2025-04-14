@@ -53,7 +53,7 @@ func (s *system) NewPort() actors.Port {
 	return p
 }
 
-//TODO: similar to another spot, merge?
+// TODO: similar to another spot, merge?
 func (s *system) Tell(ctx context.Context, p actors.Pid, m any) {
 	actor := s.pid2target(p)
 	if actor == nil {

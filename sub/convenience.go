@@ -5,7 +5,7 @@ import (
 	"sync"
 )
 
-//PumpToStandard will run the given command
+// PumpToStandard will run the given command
 func (s *Subcommand) PumpToStandard(title string) error {
 	var pumpsDone sync.WaitGroup
 

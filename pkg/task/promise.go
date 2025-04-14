@@ -23,6 +23,7 @@ func Map[I any, O any](ctx context.Context, from *Promise[I], mapFn func(ctx con
 	return output
 }
 
+// todo: reivew and merge with reactors.future.Promise
 type Promise[O any] struct {
 	result      Result[O]
 	onCompleted emitter.Dispatcher[Result[O]]

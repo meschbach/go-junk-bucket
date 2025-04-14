@@ -24,7 +24,7 @@ func Submit[I any, O any, R any](ctx context.Context, replyTo Boundary[I], targe
 		}
 
 		replyTo.ScheduleFunc(ctx, func(ctx context.Context) error {
-			VerifyWithinBoundary(ctx,replyTo)
+			VerifyWithinBoundary(ctx, replyTo)
 			if problem == nil {
 				asyncTask.Success(ctx, output)
 			} else {
