@@ -8,9 +8,11 @@ import (
 	"testing"
 )
 
-func TestEventEmitter(t *testing.T) {
+type EmitterConstructor func() Emitter[int]
+
+func applyTestEventEmitter(t *testing.T, newEmitter EmitterConstructor) {
 	t.Run("Given an event emitter", func(t *testing.T) {
-		e := Dispatcher[int]{}
+		e := newEmitter()
 		t.Run("When a listener is registered", func(t *testing.T) {
 			received := -1
 			subscription := e.On(func(ctx context.Context, event int) {
@@ -36,7 +38,7 @@ func TestEventEmitter(t *testing.T) {
 	})
 
 	t.Run("Given a dispatcher registered with a handler which adds another", func(t *testing.T) {
-		e := Dispatcher[int]{}
+		e := newEmitter()
 		lastOuterValue := -1
 		immediatelyCalled := -1
 		e.On(func(ctx context.Context, event int) {
@@ -64,7 +66,7 @@ func TestEventEmitter(t *testing.T) {
 	})
 
 	t.Run("Given an event listener which generates an error", func(t *testing.T) {
-		e := Dispatcher[int]{}
+		e := newEmitter()
 		todo := errors.New("todo")
 		secondListener := -1
 

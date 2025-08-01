@@ -6,29 +6,19 @@ import (
 	"github.com/meschbach/go-junk-bucket/pkg/fx"
 )
 
-// ListenerE is the typing for the function to receive events, possibly resulting in error on result
-type ListenerE[E any] func(ctx context.Context, event E) error
-
-// Listener is the typing for the function to receive events not resulting in an error
-type Listener[E any] func(ctx context.Context, event E)
-
-// Subscription represents a single listener bound to hear events
-type Subscription[E any] struct {
-	from   *Dispatcher[E]
-	target ListenerE[E]
-}
-
-func (s *Subscription[E]) Off() {
-	s.from.Off(s)
-}
-
-// Dispatcher manages a set of subscriptions and dispatching to those subscriptions.  Dispatcher is not thread or
-// goproc safe.
+// Dispatcher manages a set of subscriptions and dispatching to those subscriptions.  Dispatcher is not safe to use
+// with multiple goprocs.
 type Dispatcher[E any] struct {
 	listeners []*Subscription[E]
 }
 
-// OnE registers a given listener to receive events on the next broadcast.
+// NewDispatcher creates a new dispatcher for types of event E
+func NewDispatcher[E any]() *Dispatcher[E] {
+	return &Dispatcher[E]{}
+}
+
+// OnE registers a given listener to receive events on the subsequent broadcasts.  A Subscription is provided to manage
+// the invocation.  No de-duplication of listeners is performed.
 func (e *Dispatcher[E]) OnE(l ListenerE[E]) *Subscription[E] {
 	sub := &Subscription[E]{
 		target: l,
@@ -74,7 +64,8 @@ func (e *Dispatcher[E]) Once(l Listener[E]) *Subscription[E] {
 // Emit dispatches the event to all subscriptions returning a set of errors if any occur
 func (e *Dispatcher[E]) Emit(ctx context.Context, event E) error {
 	var problems []error
-	dispatchTo := append(e.listeners)
+	dispatchTo := make([]*Subscription[E], len(e.listeners))
+	copy(dispatchTo, e.listeners)
 	for _, l := range dispatchTo {
 		if err := l.target(ctx, event); err != nil {
 			problems = append(problems, err)
