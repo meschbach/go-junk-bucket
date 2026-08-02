@@ -1,0 +1,101 @@
+version: "2"
+
+run:
+  timeout: 10m
+  tests: true
+
+linters:
+  # todo: fix these
+  exclusions:
+    paths:
+      - cmd
+      - examples
+      # Exclude protobuf generated files
+      - ".*\\.pb\\.go$"
+      - ".*_grpc\\.pb\\.go$"
+  enable:
+    # Core
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    
+    # Security
+    - gosec
+    
+    # Code quality
+    - gocritic
+    - gocyclo
+    - dupl
+    - funlen
+    - gocheckcompilerdirectives
+    - gocognit
+    - godoclint
+    - misspell
+    - dogsled
+    - makezero
+    - prealloc
+    - revive
+    
+    # Testing
+    - paralleltest
+    - testifylint
+    
+    # Modern practices
+    - exhaustive
+    - forbidigo
+  settings:
+    gocyclo:
+      min-complexity: 8
+    gocognit:
+      min-complexity: 20
+    dupl:
+      threshold: 80
+    misspell:
+      locale: US
+    forbidigo:
+      forbid:
+        - pattern: "context.Background"
+          msg: "Pass a context in or used the past context"
+        - pattern: "context.TODO"
+          msg: "Use a specific context or pass a context in"
+
+    godoclint:
+      options:
+        rules:
+          - require-doc
+          - start-with-name
+          - max-len
+
+    funlen:
+      lines: 150
+      statements: 100
+
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+      disabled-checks:
+        - dupImport
+        - ifElseChain
+        - octalLiteral
+        - whyNoLint
+        - wrapperFunc
+
+    errcheck:
+      check-type-assertions: true
+      check-blank: true  # Allow _ = errors for explicit ignoring
+      exclude-functions:
+        - (fmt\.Fprintf).*outputWriter  # CLI user output is legitimate
+
+    paralleltest:
+      ignore-missing-subtests: true  # Require explicit t.Parallel() calls for all tests
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
