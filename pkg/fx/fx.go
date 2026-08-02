@@ -1,6 +1,11 @@
+// Package fx provides a small set of functional utilities for operating on slices.
+//
+// The utilities are generic, so they work on any element type.  All operations
+// preserve the relative order of the input elements in their outputs.
 package fx
 
-// Filter returns a subset of elements for each test which is true
+// Filter returns a new slice containing only the elements for which test returns true.  The original slice is left
+// unmodified and the relative order of the kept elements is preserved.
 func Filter[E any](elements []E, test func(e E) bool) []E {
 	out := make([]E, 0)
 	for _, e := range elements {
