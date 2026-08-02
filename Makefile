@@ -9,3 +9,6 @@ clean:
 
 test:
 	go test -count 1 --timeout 10s ./pkg/... ./sub/...
+
+lint:
+	golangci-lint run ./pkg/... ./sub/...
