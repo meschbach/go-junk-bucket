@@ -18,6 +18,8 @@ func applyTestEventEmitter(t *testing.T, newEmitter EmitterConstructor) {
 	applyTestEventEmitterLifecycle(t, newEmitter)
 	applyTestEventEmitterErrors(t, newEmitter)
 	applyTestEventEmitterGuarantees(t, newEmitter)
+	applyTestEventEmitterEdgeCases(t, newEmitter)
+	applyTestEventEmitterDispatchMutations(t, newEmitter)
 }
 
 func applyTestEventEmitterLifecycle(t *testing.T, newEmitter EmitterConstructor) {
@@ -202,6 +204,210 @@ func applyTestEventEmitterGuarantees(t *testing.T, newEmitter EmitterConstructor
 			t.Run("And the later listener still receives the event", func(t *testing.T) {
 				assert.Equal(t, 9, after)
 			})
+		})
+	})
+}
+
+func applyTestEventEmitterEdgeCases(t *testing.T, newEmitter EmitterConstructor) {
+	t.Run("Given an emitter with no listeners", func(t *testing.T) {
+		e := newEmitter()
+
+		t.Run("When an event is emitted", func(t *testing.T) {
+			err := e.Emit(t.Context(), 42)
+
+			t.Run("Then no error is returned", func(t *testing.T) {
+				assert.NoError(t, err)
+			})
+		})
+	})
+
+	t.Run("Given two listeners which both error", func(t *testing.T) {
+		e := newEmitter()
+		firstErr := errors.New("first")
+		secondErr := errors.New("second")
+
+		e.OnE(func(_ context.Context, _ int) error { return firstErr })
+		e.OnE(func(_ context.Context, _ int) error { return secondErr })
+
+		t.Run("When an event is emitted", func(t *testing.T) {
+			err := e.Emit(t.Context(), 1)
+
+			t.Run("Then both errors are present in the result", func(t *testing.T) {
+				require.Error(t, err)
+				assert.ErrorIs(t, err, firstErr)
+				assert.ErrorIs(t, err, secondErr)
+			})
+		})
+	})
+
+	t.Run("Given a listener which panics with a non-error value", func(t *testing.T) {
+		e := newEmitter()
+		e.OnE(func(_ context.Context, _ int) error {
+			panic("string panic")
+		})
+
+		t.Run("When an event is emitted", func(t *testing.T) {
+			err := e.Emit(t.Context(), 1)
+
+			t.Run("Then the panic is wrapped in an error", func(t *testing.T) {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "string panic")
+				assert.Contains(t, err.Error(), "listener panic")
+			})
+		})
+	})
+
+	t.Run("Given a subscription", func(t *testing.T) {
+		e := newEmitter()
+		calls := 0
+		sub := e.On(func(_ context.Context, _ int) {
+			calls++
+		})
+
+		t.Run("When Off is called twice", func(t *testing.T) {
+			sub.Off()
+			sub.Off()
+
+			t.Run("Then no panic occurs and the listener is removed", func(t *testing.T) {
+				require.NoError(t, e.Emit(t.Context(), 1))
+				assert.Equal(t, 0, calls)
+			})
+		})
+	})
+
+	t.Run("Given a OnceE listener which errors", func(t *testing.T) {
+		e := newEmitter()
+		onceErr := errors.New("once error")
+		calls := 0
+
+		e.OnceE(func(_ context.Context, _ int) error {
+			calls++
+			return onceErr
+		})
+
+		t.Run("When an event is emitted twice", func(t *testing.T) {
+			err := e.Emit(t.Context(), 1)
+			require.ErrorIs(t, err, onceErr)
+
+			err = e.Emit(t.Context(), 2)
+			require.NoError(t, err)
+
+			t.Run("Then the listener is called exactly once", func(t *testing.T) {
+				assert.Equal(t, 1, calls)
+			})
+		})
+	})
+}
+
+func applyTestEventEmitterDispatchMutations(t *testing.T, newEmitter EmitterConstructor) {
+	t.Run("Given a listener which unsubscribes itself during dispatch", func(t *testing.T) {
+		e := newEmitter()
+		calls := 0
+		var sub *Subscription[int]
+		sub = e.On(func(_ context.Context, _ int) {
+			calls++
+			sub.Off()
+		})
+
+		t.Run("When an event is emitted twice", func(t *testing.T) {
+			require.NoError(t, e.Emit(t.Context(), 1))
+			require.NoError(t, e.Emit(t.Context(), 2))
+
+			t.Run("Then it is called only once", func(t *testing.T) {
+				assert.Equal(t, 1, calls)
+			})
+		})
+	})
+
+	t.Run("Given a first listener which unsubscribes a second during dispatch", func(t *testing.T) {
+		e := newEmitter()
+		firstCalls := 0
+		secondCalls := 0
+		secondSub := e.On(func(_ context.Context, _ int) {
+			secondCalls++
+		})
+		e.On(func(_ context.Context, _ int) {
+			firstCalls++
+			secondSub.Off()
+		})
+
+		t.Run("When an event is emitted twice", func(t *testing.T) {
+			require.NoError(t, e.Emit(t.Context(), 1))
+			require.NoError(t, e.Emit(t.Context(), 2))
+
+			t.Run("Then the first listener is called both times", func(t *testing.T) {
+				assert.Equal(t, 2, firstCalls)
+			})
+			t.Run("And the second listener is called only once", func(t *testing.T) {
+				assert.Equal(t, 1, secondCalls)
+			})
+		})
+	})
+
+	t.Run("Given a listener which adds multiple listeners during dispatch", func(t *testing.T) {
+		e := newEmitter()
+		firstCalls := 0
+		e.On(func(_ context.Context, _ int) {
+			firstCalls++
+			e.On(func(_ context.Context, event int) {})
+			e.On(func(_ context.Context, event int) {})
+			e.On(func(_ context.Context, event int) {})
+		})
+
+		t.Run("When an event is emitted once", func(t *testing.T) {
+			require.NoError(t, e.Emit(t.Context(), 1))
+			t.Run("Then only the original listener is called", func(t *testing.T) {
+				assert.Equal(t, 1, firstCalls)
+			})
+		})
+
+		t.Run("When emitted a second time", func(t *testing.T) {
+			require.NoError(t, e.Emit(t.Context(), 2))
+			t.Run("Then the original listener is called again", func(t *testing.T) {
+				assert.Equal(t, 2, firstCalls)
+			})
+		})
+	})
+
+	t.Run("Given a listener which registers a listener that registers a listener", func(t *testing.T) {
+		e := newEmitter()
+		outerCalls := 0
+		middleCalls := 0
+		innerCalls := 0
+
+		e.On(func(_ context.Context, _ int) {
+			outerCalls++
+			if outerCalls == 1 {
+				e.On(func(_ context.Context, _ int) {
+					middleCalls++
+					if middleCalls == 1 {
+						e.On(func(_ context.Context, _ int) {
+							innerCalls++
+						})
+					}
+				})
+			}
+		})
+
+		t.Run("On the first emit only the outer listener fires", func(t *testing.T) {
+			require.NoError(t, e.Emit(t.Context(), 1))
+			assert.Equal(t, 1, outerCalls)
+			assert.Equal(t, 0, middleCalls)
+			assert.Equal(t, 0, innerCalls)
+		})
+
+		t.Run("On the second emit the outer and middle fire", func(t *testing.T) {
+			require.NoError(t, e.Emit(t.Context(), 2))
+			assert.Equal(t, 2, outerCalls)
+			assert.Equal(t, 1, middleCalls)
+			assert.Equal(t, 0, innerCalls)
+		})
+
+		t.Run("On the third emit all three fire", func(t *testing.T) {
+			require.NoError(t, e.Emit(t.Context(), 3))
+			assert.Equal(t, 3, outerCalls)
+			assert.Equal(t, 2, middleCalls)
+			assert.Equal(t, 1, innerCalls)
 		})
 	})
 }

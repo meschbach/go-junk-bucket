@@ -39,6 +39,15 @@ Broadcast with Emit, and call Subscription.Off when a listener should stop
 receiving events. For one-shot interest, use Once or OnceE, which unsubscribe
 automatically after the first delivery. The Example functions below walk
 through the full lifecycle.
+
+# Testing
+
+Both Dispatcher and MutexDispatcher are tested against a shared conformance
+suite (applyTestEventEmitter) that exercises the full Emitter interface
+contract: registration, delivery, unsubscription, once semantics, error
+aggregation, and panic containment. Adding a new implementation only requires
+wiring it into the suite to inherit the same coverage. The Example functions
+serve as executable documentation verified by "go test".
 */
 package emitter
 
