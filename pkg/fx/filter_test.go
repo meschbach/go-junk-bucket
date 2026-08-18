@@ -7,12 +7,64 @@ import (
 )
 
 func TestFilter(t *testing.T) {
+	t.Run("Given a nil slice", func(t *testing.T) {
+		var input []int
+
+		t.Run("When filtered with a test that is always false", func(t *testing.T) {
+			output := Filter(input, func(e int) bool {
+				return false
+			})
+
+			t.Run("Then it results in an empty slice", func(t *testing.T) {
+				assert.Len(t, output, 0)
+			})
+		})
+
+		t.Run("When filtered with a test that is always true", func(t *testing.T) {
+			output := Filter(input, func(e int) bool {
+				return true
+			})
+
+			t.Run("Then it results in an empty slice", func(t *testing.T) {
+				assert.Len(t, output, 0)
+			})
+		})
+	})
+
 	t.Run("Given an empty slice", func(t *testing.T) {
 		var input []int64
 
 		t.Run("When filtered", func(t *testing.T) {
 			output := Filter[int64](input, func(e int64) bool {
 				return true
+			})
+
+			t.Run("Then it results in an empty slice", func(t *testing.T) {
+				assert.Len(t, output, 0)
+			})
+		})
+	})
+
+	t.Run("Given a single element which matches", func(t *testing.T) {
+		input := []int{42}
+
+		t.Run("When filtered", func(t *testing.T) {
+			output := Filter(input, func(e int) bool {
+				return e == 42
+			})
+
+			t.Run("Then the element is kept", func(t *testing.T) {
+				assert.Equal(t, []int{42}, output)
+			})
+		})
+	})
+
+	t.Run("Given a single element which does not match", func(t *testing.T) {
+		input := []int{42}
+
+		t.Run("When filtered", func(t *testing.T) {
+			output := Filter(input, func(e int) bool {
+				return e == 0
 			})
 
 			t.Run("Then it results in an empty slice", func(t *testing.T) {
@@ -61,6 +113,17 @@ func TestFilter(t *testing.T) {
 
 			t.Run("Then all values are kept in the original order", func(t *testing.T) {
 				assert.Equal(t, input, output)
+			})
+		})
+
+		t.Run("When filtered", func(t *testing.T) {
+			original := []int{1, 2, 3, 4, 5}
+			_ = Filter(original, func(e int) bool {
+				return e > 2
+			})
+
+			t.Run("Then the original slice is unmodified", func(t *testing.T) {
+				assert.Equal(t, []int{1, 2, 3, 4, 5}, original)
 			})
 		})
 	})

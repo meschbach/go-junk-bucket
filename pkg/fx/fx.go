@@ -1,7 +1,37 @@
-// Package fx provides a small set of functional utilities for operating on slices.
-//
-// The utilities are generic, so they work on any element type.  All operations
-// preserve the relative order of the input elements in their outputs.
+/*
+Package fx provides a small set of functional utilities for operating on slices.
+
+# Motivation
+
+Go's type system makes it easy to write clear, single-purpose loop helpers, but
+reimplementing the same patterns—filter, map, split—across projects wastes time
+and invites subtle bugs.  This package packages those patterns into tested,
+generic functions so callers can compose them without hand-rolling loops.
+
+# Design
+
+Every function in this package is a pure function: it produces no side effects,
+does not mutate its inputs, and returns a new slice (or value) derived from the
+arguments.  All slice operations preserve the relative order of the input
+elements in their outputs.  The functions are generic, so they work with any
+element type.
+
+# Usage
+
+Filter, Map, and Split are the core primitives.  They compose naturally:
+
+  - Use Filter to narrow a slice to elements that satisfy a predicate.
+  - Use Map to transform every element from one type to another.
+  - Use Split to partition a slice into two groups in a single pass.
+
+Identity is a convenience function useful as a default transform in tests.
+
+# Testing
+
+Each function is tested with table-driven subtests covering empty, single-
+element, and multi-element inputs.  The Example functions serve as executable
+documentation verified by "go test".
+*/
 package fx
 
 // Filter returns a new slice containing only the elements for which test returns true.  The original slice is left
