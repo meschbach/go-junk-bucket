@@ -7,6 +7,10 @@ import (
 	"fmt"
 )
 
+// VerifyWithinBoundary checks that ctx contains the expected boundary.
+// Panics if the boundary is missing, mismatched, or the wrong type.
+// Use the "sane" build tag during development and testing to catch
+// boundary violations early.
 func VerifyWithinBoundary[S any](ctx context.Context, boundary Boundary[S]) {
 	if inBoundary, has := Maybe[S](ctx); has {
 		if inBoundary != boundary {

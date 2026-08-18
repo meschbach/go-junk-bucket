@@ -5,7 +5,11 @@ import (
 	"errors"
 )
 
-// RunChannelActor will run a new reactor with the given state until the given context is complete.
+// RunChannelActor starts a goroutine running a [Channel] reactor with the given
+// initial state. The reactor processes events until ctx is canceled.
+//
+// Errors other than context.Canceled cause a panic. The returned [Channel] can
+// be used to schedule work into the running reactor.
 func RunChannelActor[E any](ctx context.Context, state E) *Channel[E] {
 	reactor, queue := NewChannel[E](32)
 	go func() {

@@ -5,6 +5,7 @@ import (
 	"github.com/meschbach/go-junk-bucket/pkg/streams"
 )
 
+// StreamBetweenOpt configures a [StreamBetween].
 type StreamBetweenOpt func(s *streamBetweenConfig)
 
 type streamBetweenConfig struct {
@@ -18,16 +19,22 @@ func (s *streamBetweenConfig) init(opts []StreamBetweenOpt) {
 	}
 }
 
+// WithStreamBetweenName sets the tracing name prefix for the stream's internal spans.
 func WithStreamBetweenName(name string) StreamBetweenOpt {
 	return func(s *streamBetweenConfig) {
 		s.name = name
 	}
 }
 
-// StreamBetween allows a stream to traverse between two boundaries in a synchronized manner.
+// StreamBetween creates a [streams.Source] and [streams.Sink] that bridge
+// inputSide and outputSide reactor boundaries.
 //
-// Seems a bit strange to have this generated outside of the source boundary since the stream must be passed in.  In
-// practice this should generally be invoked by the coordinating builder common between both sides.
+// Events written to the returned sink are delivered to outputSide's reactor,
+// and feedback flows back to inputSide's reactor. Both sides execute within
+// their respective reactor boundaries, preserving single-threaded semantics.
+//
+// StreamBetween should generally be invoked by a coordinating builder common
+// to both sides, since the returned stream must be passed between boundaries.
 func StreamBetween[E any, I any, O any](ctx context.Context, inputSide Boundary[I], outputSide Boundary[O], opts ...StreamBetweenOpt) (streams.Source[E], streams.Sink[E], error) {
 	//figure out options
 	cfg := streamBetweenConfig{}

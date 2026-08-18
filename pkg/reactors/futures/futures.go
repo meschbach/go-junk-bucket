@@ -1,9 +1,14 @@
-// Package futures provides a promise mechanism against reactors to resolve when event occur in the future.
 package futures
 
+// Result holds the outcome of a resolved promise.
 type Result[O any] struct {
+	// Resolved indicates whether the promise has completed.
 	Resolved bool
-	Result   O
-	//Problem, when not nil, indicates the future in question has resolved with an error or has failed
+
+	// Result contains the output value when the promise completed successfully.
+	// Only valid when Resolved is true and Problem is nil.
+	Result O
+
+	// Problem, when not nil, indicates the promise completed with an error.
 	Problem error
 }

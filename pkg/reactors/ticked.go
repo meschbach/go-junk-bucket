@@ -5,14 +5,16 @@ import (
 	"sync"
 )
 
-// Ticked is a Boundary externally driven when calling the Tick method.  Events will be queued until it is
-// manually ticked.
+// Ticked is a [Boundary] that queues scheduled events for manual execution via [Ticked.Tick].
+// Unlike [Channel], it has no internal goroutine and is driven entirely by the caller.
 type Ticked[S any] struct {
 	lock      sync.Mutex
 	scheduled []TickEventStateFunc[S]
 }
 
-// Tick executes up to the maximum number of event reductions within the reactor.
+// Tick executes up to maximum pending events.
+// Returns hasMore indicating whether events remain in the queue, and any error
+// from a scheduled function.
 func (t *Ticked[S]) Tick(ctx context.Context, maximum int, state S) (hasMore bool, err error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
@@ -43,12 +45,16 @@ func (t *Ticked[S]) Tick(ctx context.Context, maximum int, state S) (hasMore boo
 	return len(t.scheduled) > 0, nil
 }
 
+// ScheduleFunc appends operation to the pending queue.
+// It will execute on the next call to [Ticked.Tick].
 func (t *Ticked[S]) ScheduleFunc(ctx context.Context, operation TickEventFunc) {
 	t.ScheduleStateFunc(ctx, func(ctx context.Context, state S) error {
 		return operation(ctx)
 	})
 }
 
+// ScheduleStateFunc appends operation to the pending queue.
+// It will execute on the next call to [Ticked.Tick].
 func (t *Ticked[S]) ScheduleStateFunc(ctx context.Context, operation TickEventStateFunc[S]) {
 	t.lock.Lock()
 	defer t.lock.Unlock()

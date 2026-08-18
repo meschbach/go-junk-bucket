@@ -4,7 +4,7 @@ package reactors
 
 import "context"
 
-// VerifyWithinBoundary will panic if the given context is invoked with the wrong boundary when using the `sane` build
-// tag.  Otherwise, this ia no-op
+// VerifyWithinBoundary is a no-op when built without the "sane" tag.
+// Use the "sane" build tag to enable boundary verification during development.
 func VerifyWithinBoundary[S any](ctx context.Context, boundary Boundary[S]) {
 }
