@@ -3,6 +3,7 @@ package streams
 import (
 	"context"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -11,6 +12,66 @@ func TestBufferStream(t *testing.T) {
 		t.Parallel()
 		assert.Implements(t, (*Sink[int])(nil), NewBuffer[int](3))
 		assert.Implements(t, (*Source[float32])(nil), NewBuffer[float32](3))
+	})
+
+	t.Run("Given an empty Buffer with a limit of 3", func(t *testing.T) {
+		t.Parallel()
+		ctx, done := context.WithCancel(context.Background())
+		t.Cleanup(done)
+
+		s := NewBuffer[int](3)
+
+		t.Run("When Finish is called on an empty buffer", func(t *testing.T) {
+			require.NoError(t, s.Finish(ctx))
+
+			t.Run("Then ReadSlice returns End", func(t *testing.T) {
+				readOut := make([]int, 3)
+				count, err := s.ReadSlice(ctx, readOut)
+				assert.Equal(t, 0, count, "no elements should be read from an empty finished buffer")
+				assert.ErrorIs(t, err, End, "finished empty buffer should report End")
+			})
+		})
+	})
+
+	t.Run("Given a Buffer finishing with empty Output", func(t *testing.T) {
+		ctx, done := context.WithCancel(context.Background())
+		t.Cleanup(done)
+
+		s := NewBuffer[int](3)
+
+		require.NoError(t, s.Write(ctx, 1))
+		readOut := make([]int, 1)
+		count, err := s.ReadSlice(ctx, readOut)
+		require.NoError(t, err)
+		require.Equal(t, 1, count)
+		require.NoError(t, s.Finish(ctx))
+
+		t.Run("Then ReadSlice returns End on empty finishing buffer", func(t *testing.T) {
+			out := make([]int, 3)
+			count, err := s.ReadSlice(ctx, out)
+			assert.Equal(t, 0, count, "no elements from empty finishing buffer")
+			assert.ErrorIs(t, err, End, "empty buffer with writeState=bufferFinishing should report End")
+		})
+	})
+
+	t.Run("Given a Buffer connected to a ChannelSource via ConnectedPipe", func(t *testing.T) {
+		ctx, done := context.WithCancel(context.Background())
+		t.Cleanup(done)
+
+		t.Run("ReadSlice fires Drained and Finish chain causes ReadSlice to return End", func(t *testing.T) {
+			port := NewChannelPort[int](32)
+			outputBuffer := NewBuffer[int](32)
+			pipe, err := Connect[int](ctx, port.Output, outputBuffer)
+			require.NoError(t, err)
+			t.Cleanup(func() { _ = pipe.Close(ctx) })
+
+			require.NoError(t, port.Input.Finish(ctx))
+
+			values := make([]int, 32)
+			count, err := outputBuffer.ReadSlice(ctx, values)
+			assert.Equal(t, 0, count, "no elements from empty buffer after finish chain")
+			assert.ErrorIs(t, err, End, "ReadSlice should re-check readState after Drained and return End")
+		})
 	})
 
 	t.Run("Given a Buffer with a limit of 3", func(t *testing.T) {

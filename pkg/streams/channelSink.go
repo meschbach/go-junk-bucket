@@ -14,8 +14,9 @@ type ChannelSink[T any] struct {
 	events *SinkEvents[T]
 	target chan<- T
 	//Waiting indicates a consumer on the opposite side is waiting on a response
-	waiting bool
-	Push    func(ctx context.Context) error
+	waiting   bool
+	finishing bool
+	Push      func(ctx context.Context) error
 }
 
 func NewChannelSink[T any](target chan<- T) *ChannelSink[T] {
@@ -32,6 +33,10 @@ func NewChannelSink[T any](target chan<- T) *ChannelSink[T] {
 func (c *ChannelSink[T]) Write(parent context.Context, v T) error {
 	ctx, span := tracing.Start(parent, "ChannelSink.Write", trace.WithAttributes(attribute.Bool("waiting", c.waiting)))
 	defer span.End()
+
+	if c.finishing {
+		return Done
+	}
 
 	select {
 	case <-ctx.Done():
@@ -57,9 +62,16 @@ func (c *ChannelSink[T]) Write(parent context.Context, v T) error {
 }
 
 func (c *ChannelSink[T]) Finish(ctx context.Context) error {
+	if c.finishing {
+		return nil
+	}
+	c.finishing = true
 	finishingProblems := c.events.Finishing.Emit(ctx, c)
 	close(c.target)
 	finishedProblems := c.events.Finished.Emit(ctx, c)
+	if pushErr := c.Push(ctx); pushErr != nil {
+		finishedProblems = errors.Join(finishedProblems, pushErr)
+	}
 	return errors.Join(finishingProblems, finishedProblems)
 }
 
@@ -68,6 +80,9 @@ func (c *ChannelSink[T]) SinkEvents() *SinkEvents[T] {
 }
 
 func (c *ChannelSink[T]) Resume(ctx context.Context) error {
+	if c.finishing {
+		return Done
+	}
 	//todo: the channel itself does not really support this -- figure out how
 	return nil
 }

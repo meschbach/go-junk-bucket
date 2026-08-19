@@ -3,21 +3,11 @@ package streams
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 )
-
-type write struct {
-	value   int
-	replyTo chan<- error
-}
-
-type writeReply struct {
-	problem error
-}
 
 func TestChannelConnection(t *testing.T) {
 	t.Run("Given a port with a buffered input and output", func(t *testing.T) {
@@ -45,51 +35,42 @@ func TestChannelConnection(t *testing.T) {
 			})
 
 			t.Run("Then the full output side may be read", func(t *testing.T) {
-				writeEvents := make(chan write, 32)
-				pumper, done := context.WithCancel(scope)
-				t.Cleanup(done)
-				go func() {
-					for {
-						select {
-						case write := <-writeEvents:
-							problem := port.Input.Write(pumper, write.value)
-							write.replyTo <- problem
-						case <-pumper.Done():
-						case e := <-port.Feedback:
-							err := port.Input.ConsumeEvent(pumper, e)
-							if err != nil && !errors.Is(err, context.Canceled) {
-								fmt.Printf("Error after completion: %s\n", err.Error())
-								require.NoError(t, err)
-							}
-						}
-					}
-				}()
+				// Pump first batch: channel has [1,2,3] from flowing writes
+				err = port.Output.Resume(scope)
+				require.NoError(t, err)
+
+				// Read from target
 				result := make([]int, 32)
-				count, err := ReadAll[int](scope, target, result, func(ctx2 context.Context, count int) (bool, error) {
-					if count >= 6 {
-						return true, nil
-					}
-					return false, port.Output.WaitOnEvent(ctx2)
-				})
-				require.NoError(t, err, "expected to finish full array got %#v", result[:count])
-				if assert.Equal(t, []int{1, 2, 3, 4, 5, 6}, result[:count]) {
-					assert.Equal(t, 6, count)
-				}
+				n, err := target.ReadSlice(scope, result)
+				require.NoError(t, err)
+				require.Equal(t, 3, n)
+				require.Equal(t, []int{1, 2, 3}, result[:n])
+
+				// Trigger origin to write [4,5,6] to channel.
+				// Resume returns Full when the 3rd write fills the channel; that's expected.
+				_ = origin.Resume(scope)
+
+				// Pump second batch
+				err = port.Output.Resume(scope)
+				require.NoError(t, err)
+
+				// Read remaining values
+				n, err = target.ReadSlice(scope, result[3:])
+				require.NoError(t, err)
+				require.Equal(t, 3, n)
+				require.Equal(t, []int{4, 5, 6}, result[3:6])
+
+				assert.Equal(t, []int{1, 2, 3, 4, 5, 6}, result[:6])
 
 				t.Run("And pumping through on the output", func(t *testing.T) {
 					_, err := port.Output.PumpTick(scope)
 					require.NoError(t, err)
 
 					t.Run("Then it accepts writes again", func(t *testing.T) {
-						replyAt := make(chan error)
-						writeEvents <- write{
-							value:   7,
-							replyTo: replyAt,
-						}
-						assert.NoError(t, <-replyAt, "no writing errors")
+						err := port.Input.Write(scope, 7)
+						assert.NoError(t, err, "no writing errors")
 					})
 				})
-
 			})
 		})
 	})

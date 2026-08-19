@@ -68,6 +68,21 @@ func TestChannelSource(t *testing.T) {
 			})
 		})
 
+		t.Run("When the channel is closed and PumpTick is called", func(t *testing.T) {
+			pipe2 := make(chan int, 3)
+			src2 := NewChannelSource(pipe2)
+
+			// Transition to flowing mode so PumpTick will attempt to read
+			_ = src2.Resume(scope)
+			close(pipe2)
+
+			t.Run("Then PumpTick returns End", func(t *testing.T) {
+				count, err := src2.PumpTick(scope)
+				assert.Equal(t, 0, count, "no elements read from closed channel")
+				assert.ErrorIs(t, err, End, "PumpTick should detect closed channel")
+			})
+		})
+
 		t.Run("When the source pipe is closed with a partial buffer", func(t *testing.T) {
 			pipe <- 43
 			close(pipe)

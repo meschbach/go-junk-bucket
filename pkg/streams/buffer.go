@@ -248,8 +248,16 @@ func (s *Buffer[T]) ReadSlice(parent context.Context, to []T) (int, error) {
 			//do we still not have elements?
 			if len(s.Output) == 0 {
 				if countRead == 0 {
-					span.AddEvent("under run")
-					return 0, UnderRun
+					switch s.writeState {
+					case bufferFinishing:
+						drainErr := s.finishedFinalDrain(ctx)
+						return 0, errors.Join(End, drainErr)
+					case bufferFinished:
+						return 0, End
+					default:
+						span.AddEvent("under run")
+						return 0, UnderRun
+					}
 				} else {
 					span.AddEvent("filled buffer")
 					return countRead, nil
@@ -261,6 +269,9 @@ func (s *Buffer[T]) ReadSlice(parent context.Context, to []T) (int, error) {
 		copiedCount := copy(to[countRead:], s.Output)
 		s.Output = s.Output[copiedCount:]
 		countRead += copiedCount
+	}
+	if s.readState == bufferDone {
+		return countRead, End
 	}
 	if s.writeState == bufferWritable {
 		span.AddEvent("writable")
