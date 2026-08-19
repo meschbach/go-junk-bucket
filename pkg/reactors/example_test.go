@@ -45,13 +45,15 @@ func ExampleRunChannelActor() {
 	reactor := reactors.RunChannelActor(ctx, 0)
 
 	var result int
+	done := make(chan struct{})
 	reactor.ScheduleStateFunc(ctx, func(ctx context.Context, state int) error {
 		result = state + 42
+		close(done)
 		return nil
 	})
 
-	// Give the goroutine time to process the event.
-	time.Sleep(10 * time.Millisecond)
+	// Wait for the goroutine to process the event.
+	<-done
 	fmt.Println(result)
 
 	// Output: 42

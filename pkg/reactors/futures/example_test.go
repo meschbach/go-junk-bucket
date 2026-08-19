@@ -3,7 +3,6 @@ package futures_test
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/meschbach/go-junk-bucket/pkg/reactors"
 	"github.com/meschbach/go-junk-bucket/pkg/reactors/futures"
@@ -42,17 +41,18 @@ func ExamplePromise_handleFuncOn() {
 
 	// Schedule work, result delivered to handler.
 	var result string
+	done := make(chan struct{})
 	promise := futures.PromiseFuncOn(ctx, worker, func(ctx context.Context, state int) (int, error) {
 		return state + 1, nil
 	})
 	promise.HandleFuncOn(ctx, handler, func(ctx context.Context, state int, resolved futures.Result[int]) error {
 		result = fmt.Sprintf("result: %d", resolved.Result)
+		close(done)
 		return nil
 	})
 
 	// Wait for the handler to process the result.
-	time.Sleep(50 * time.Millisecond)
-
+	<-done
 	fmt.Println(result)
 
 	// Output: result: 42
@@ -73,14 +73,15 @@ func ExampleTraverse() {
 
 	// Route the result to consumer using Traverse.
 	var delivered bool
+	done := make(chan struct{})
 	futures.Traverse(ctx, promise, consumer, func(ctx context.Context, state int, resolved futures.Result[int]) error {
 		delivered = true
+		close(done)
 		return nil
 	})
 
 	// Wait for the result to be delivered.
-	time.Sleep(50 * time.Millisecond)
-
+	<-done
 	fmt.Println(delivered)
 
 	// Output: true
