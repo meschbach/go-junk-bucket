@@ -2,11 +2,12 @@ package reactors
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/meschbach/go-junk-bucket/pkg/task"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
-	"time"
 )
 
 func TestCrossTaskPromise(t *testing.T) {

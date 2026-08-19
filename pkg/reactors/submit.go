@@ -2,6 +2,7 @@ package reactors
 
 import (
 	"context"
+
 	"github.com/meschbach/go-junk-bucket/pkg/task"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"

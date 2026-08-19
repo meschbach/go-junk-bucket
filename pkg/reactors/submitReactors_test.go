@@ -2,10 +2,11 @@ package reactors
 
 import (
 	"context"
-	"github.com/meschbach/go-junk-bucket/pkg/task"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/meschbach/go-junk-bucket/pkg/task"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestAsyncWork(t *testing.T) {

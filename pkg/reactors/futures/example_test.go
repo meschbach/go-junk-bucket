@@ -68,7 +68,7 @@ func ExampleTraverse() {
 
 	// Producer computes a value.
 	promise := futures.PromiseFuncOn(ctx, producer, func(ctx context.Context, state int) (int, error) {
-		return state * 10 + 2, nil
+		return state*10 + 2, nil
 	})
 
 	// Route the result to consumer using Traverse.

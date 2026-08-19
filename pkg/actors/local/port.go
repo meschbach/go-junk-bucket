@@ -3,13 +3,14 @@ package local
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"sync/atomic"
+	"time"
+
 	"github.com/meschbach/go-junk-bucket/pkg/actors"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
-	"reflect"
-	"sync/atomic"
-	"time"
 )
 
 const (

@@ -4,9 +4,10 @@ package buffernet
 
 import (
 	"context"
+	"net"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"
-	"net"
 )
 
 type BufferTransport struct {

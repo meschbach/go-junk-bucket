@@ -2,9 +2,10 @@ package streams
 
 import (
 	"context"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestChannelSource(t *testing.T) {
@@ -80,6 +81,33 @@ func TestChannelSource(t *testing.T) {
 				count, err := src2.PumpTick(scope)
 				assert.Equal(t, 0, count, "no elements read from closed channel")
 				assert.ErrorIs(t, err, End, "PumpTick should detect closed channel")
+			})
+		})
+
+		t.Run("When the channel is closed while paused", func(t *testing.T) {
+			pipe3 := make(chan int, 3)
+			src3 := NewChannelSource(pipe3)
+
+			// Wire src3 to a tiny buffer so PumpTick pauses after filling it
+			tinyBuffer := NewBuffer[int](1)
+			_, err := Connect[int](scope, src3, tinyBuffer)
+			require.NoError(t, err)
+
+			// Put data in the channel and pump — first value fills buffer to Full,
+			// causing source to pause
+			pipe3 <- 42
+			count, err := src3.PumpTick(scope)
+			require.NoError(t, err)
+			require.Equal(t, 1, count, "first value should be pumped")
+			require.Equal(t, channelSourcePaused, src3.mode, "source should be paused after Full")
+
+			// Now close the channel underneath
+			close(pipe3)
+
+			t.Run("Then PumpTick detects End even when paused", func(t *testing.T) {
+				count, err := src3.PumpTick(scope)
+				assert.Equal(t, 0, count, "no elements while paused+closed")
+				assert.ErrorIs(t, err, End, "PumpTick should detect closed channel even when paused")
 			})
 		})
 

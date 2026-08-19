@@ -3,13 +3,14 @@ package local
 import (
 	"context"
 	"fmt"
+	"strings"
+	"sync"
+	"sync/atomic"
+
 	"github.com/meschbach/go-junk-bucket/pkg/actors"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
-	"strings"
-	"sync"
-	"sync/atomic"
 )
 
 type messageTarget interface {

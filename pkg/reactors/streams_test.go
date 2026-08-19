@@ -2,12 +2,13 @@ package reactors
 
 import (
 	"context"
-	"github.com/meschbach/go-junk-bucket/pkg/streams"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/meschbach/go-junk-bucket/pkg/streams"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestStreamFinishEndToEnd(t *testing.T) {
@@ -28,14 +29,15 @@ func TestStreamFinishEndToEnd(t *testing.T) {
 			waiter := &sync.WaitGroup{}
 			waiter.Add(1)
 			sourceReactor.ScheduleFunc(testContext, func(ctx context.Context) error {
+				finishErr := sourceReactorOutput.Finish(ctx)
 				waiter.Done()
-				return sourceReactorOutput.Finish(ctx)
+				return finishErr
 			})
 			waiter.Wait()
 
 			t.Run("And the output side is ticked to process the Finish", func(t *testing.T) {
 				remaining, err := ticked.Tick(testContext, 32, 1)
-				assert.ErrorIs(t, err, streams.End, "Tick should propagate End from PumpTick")
+				require.NoError(t, err, "End is swallowed by Push callback; Tick should succeed")
 				require.False(t, remaining, "no pending tasks should remain after tick")
 
 				t.Run("Then the Buffer reports End", func(t *testing.T) {
@@ -84,14 +86,15 @@ func TestStreamFinishEndToEnd(t *testing.T) {
 				waiter2 := &sync.WaitGroup{}
 				waiter2.Add(1)
 				sourceReactor.ScheduleFunc(testContext, func(ctx context.Context) error {
+					finishErr := sourceReactorOutput.Finish(ctx)
 					waiter2.Done()
-					return sourceReactorOutput.Finish(ctx)
+					return finishErr
 				})
 				waiter2.Wait()
 
 				remaining, err := ticked.Tick(testContext, 32, 1)
-				assert.ErrorIs(t, err, streams.End, "Tick should propagate End from PumpTick")
-				require.False(t, remaining)
+				require.NoError(t, err, "Tick should not return End — it's swallowed by the Push callback")
+				require.False(t, remaining, "no pending tasks should remain after tick")
 
 				t.Run("Then the Buffer reports End", func(t *testing.T) {
 					count, err := outputBuffer.ReadSlice(testContext, values)
@@ -138,7 +141,7 @@ func TestStreamThroughBoundary(t *testing.T) {
 					_, err = originWell.Tick(timedTestContext, 10, &sourceState{})
 					require.NoError(t, err)
 					_, err = outputWell.Tick(timedTestContext, 10, &targetState{})
-					require.NoError(t, err)
+					require.NoError(t, err, "End is swallowed by Push callback")
 
 					t.Run("Then the source stream has ended", func(t *testing.T) {
 						count, err := source.ReadSlice(outputWellContext, output)

@@ -4,15 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
+	"runtime/debug"
+	"strings"
+	"sync"
+
 	"github.com/meschbach/go-junk-bucket/pkg/actors"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
-	"reflect"
-	"runtime/debug"
-	"strings"
-	"sync"
 )
 
 const TracerName = "git.meschbach.com/mee/junk/actors"

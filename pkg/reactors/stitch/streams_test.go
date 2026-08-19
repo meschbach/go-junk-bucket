@@ -3,13 +3,14 @@ package stitch
 import (
 	"context"
 	"errors"
+	"testing"
+	"time"
+
 	"github.com/meschbach/go-junk-bucket/pkg/reactors"
 	"github.com/meschbach/go-junk-bucket/pkg/streams"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/thejerf/suture/v4"
-	"testing"
-	"time"
 )
 
 func TestStreamBetween(t *testing.T) {

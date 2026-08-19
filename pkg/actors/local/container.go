@@ -2,10 +2,11 @@ package local
 
 import (
 	"context"
+	"strings"
+
 	"github.com/meschbach/go-junk-bucket/pkg/actors"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
-	"strings"
 )
 
 type container struct {

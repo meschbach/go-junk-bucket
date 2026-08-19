@@ -2,12 +2,13 @@ package reactors
 
 import (
 	"context"
-	"github.com/meschbach/go-junk-bucket/pkg/streams"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/meschbach/go-junk-bucket/pkg/streams"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestStreamFromTickToChannel(t *testing.T) {
@@ -51,12 +52,13 @@ func TestStreamFromTickToChannel(t *testing.T) {
 			waiter := &sync.WaitGroup{}
 			waiter.Add(1)
 			sourceReactor.ScheduleFunc(testContext, func(ctx context.Context) error {
+				finishErr := sourceReactorOutput.Finish(ctx)
 				waiter.Done()
-				return sourceReactorOutput.Finish(ctx)
+				return finishErr
 			})
 			waiter.Wait()
-			remaining, err := ticked.Tick(testContext, 32, 0)
-			require.NoError(t, err)
+			remaining, err := ticked.Tick(testContext, 32, 1)
+			require.NoError(t, err, "End is swallowed by Push callback; Tick should succeed")
 			require.False(t, remaining, "no waiting functions should remain")
 
 			t.Run("Then the stream finished is propagated", func(t *testing.T) {

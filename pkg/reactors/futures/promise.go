@@ -2,6 +2,7 @@ package futures
 
 import (
 	"context"
+
 	"github.com/meschbach/go-junk-bucket/pkg/reactors"
 )
 

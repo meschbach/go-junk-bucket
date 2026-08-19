@@ -2,6 +2,8 @@ package reactors
 
 import (
 	"context"
+	"errors"
+
 	"github.com/meschbach/go-junk-bucket/pkg/streams"
 )
 
@@ -51,6 +53,11 @@ func StreamBetween[E any, I any, O any](ctx context.Context, inputSide Boundary[
 			ctx, span := tracing.Start(parent, cfg.name+".consumer.feedback")
 			defer span.End()
 			_, err := outputSource.PumpTick(ctx)
+			// End is a terminal signal delivered via SourceEvents.End.
+			// Don't propagate it as an error to the reactor boundary.
+			if errors.Is(err, streams.End) {
+				return nil
+			}
 			return err
 		})
 		return nil

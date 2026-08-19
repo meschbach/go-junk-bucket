@@ -2,6 +2,7 @@ package stitch
 
 import (
 	"context"
+
 	"github.com/meschbach/go-junk-bucket/pkg/reactors"
 	"github.com/meschbach/go-junk-bucket/pkg/reactors/futures"
 )

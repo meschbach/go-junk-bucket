@@ -3,6 +3,7 @@ package streams
 import (
 	"context"
 	"errors"
+
 	"github.com/meschbach/go-junk-bucket/pkg/emitter"
 )
 

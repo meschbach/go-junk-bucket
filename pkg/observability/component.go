@@ -3,6 +3,7 @@ package observability
 import (
 	"context"
 	"errors"
+
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 

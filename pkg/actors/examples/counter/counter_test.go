@@ -2,9 +2,10 @@ package counter
 
 import (
 	"context"
+	"testing"
+
 	"github.com/meschbach/go-junk-bucket/pkg/actors/local"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestSimpleCounter(t *testing.T) {

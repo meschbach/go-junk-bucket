@@ -3,6 +3,7 @@ package streams
 import (
 	"context"
 	"errors"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -21,6 +22,8 @@ type ChannelSource[T any] struct {
 	mode     channelSourceMode
 	//pendingData indicates a data request has already been sent but no data has been received
 	pendingData bool
+	//feedbackClosed prevents double-close of the feedback channel
+	feedbackClosed bool
 }
 
 func NewChannelSource[T any](pipe <-chan T) *ChannelSource[T] {
@@ -56,9 +59,7 @@ func (c *ChannelSource[T]) ReadSlice(parent context.Context, to []T) (i int, err
 				keepReading = targetSize > i
 			} else {
 				span.AddEvent("channel closed")
-				if c.feedback != nil {
-					close(c.feedback)
-				}
+				c.closeFeedback()
 				return i, End
 			}
 		default:
@@ -102,9 +103,7 @@ func (c *ChannelSource[T]) WaitOnEvent(ctx context.Context) error {
 			}
 		} else {
 			endError := c.events.End.Emit(ctx, c)
-			if c.feedback != nil {
-				close(c.feedback)
-			}
+			c.closeFeedback()
 			return endError
 		}
 	}
@@ -116,47 +115,86 @@ func (c *ChannelSource[T]) PumpTick(parent context.Context) (count int, err erro
 	defer span.End()
 
 	count = 0
-	hasData := true
-	for c.mode == channelSourceFlowing && hasData {
+	for c.mode == channelSourceFlowing {
+		value, open, hasData := c.tryReadPipe(ctx, span)
+		if !hasData {
+			break
+		}
+		if !open {
+			span.AddEvent("channel-end")
+			problem := c.events.End.Emit(ctx, c)
+			c.closeFeedback()
+			outErr := End
+			if problem != nil {
+				outErr = errors.Join(outErr, problem)
+			}
+			return count, outErr
+		}
+		span.AddEvent("channel-value")
+		c.resetFeedback()
+		count++
+		if e := c.events.Data.Emit(ctx, value); e != nil {
+			if errors.Is(e, Full) {
+				c.mode = channelSourcePaused
+				return count, nil
+			}
+			return count, e
+		}
+	}
+	span.AddEvent("done")
+	if c.mode != channelSourceFlowing {
+		return c.drainIfClosedOrPaused(ctx, count, span)
+	}
+	if err := c.notifyFeedback(ctx); err != nil {
+		return count, err
+	}
+	return count, nil
+}
+
+// tryReadPipe attempts a non-blocking receive on the pipe. Returns the value,
+// whether the channel is still open, and whether any event was ready.
+func (c *ChannelSource[T]) tryReadPipe(ctx context.Context, span trace.Span) (value T, open, ready bool) {
+	select {
+	case <-ctx.Done():
+		return value, false, false
+	case value, open = <-c.pipe:
+		return value, open, true
+	default:
+		span.AddEvent("channel empty")
+		return value, false, false
+	}
+}
+
+// drainIfClosedOrPaused handles the case where PumpTick was called while the
+// source is not in flowing mode. When paused, we still need to detect a closed
+// channel (e.g., from Finish) and emit End.
+func (c *ChannelSource[T]) drainIfClosedOrPaused(ctx context.Context, count int, span trace.Span) (int, error) {
+	for {
 		select {
 		case <-ctx.Done():
-			span.AddEvent("context done")
 			return count, ctx.Err()
-		case value, open := <-c.pipe:
-			if open {
-				span.AddEvent("channel-value")
-				c.resetFeedback()
-				count++
-				if err := c.events.Data.Emit(ctx, value); err != nil {
-					// A consumer of our data is full and needs us to buffer.  We'll toggle back to paused mode.
-					if errors.Is(err, Full) {
-						c.mode = channelSourcePaused
-						return count, nil
-					}
-					return count, err
-				}
-			} else {
-				span.AddEvent("channel-end")
+		case value, ok := <-c.pipe:
+			if !ok {
+				span.AddEvent("paused-channel-closed")
 				problem := c.events.End.Emit(ctx, c)
-				if c.feedback != nil {
-					close(c.feedback)
-				}
+				c.closeFeedback()
 				outErr := End
 				if problem != nil {
 					outErr = errors.Join(outErr, problem)
 				}
 				return count, outErr
 			}
+			count++
+			if err := c.events.Data.Emit(ctx, value); err != nil {
+				if errors.Is(err, Full) {
+					return count, nil
+				}
+				return count, err
+			}
 		default:
-			span.AddEvent("channel empty")
-			hasData = false
+			return count, nil
 		}
 	}
-	span.AddEvent("done")
-	if err := c.notifyFeedback(ctx); err != nil {
-		return count, err
-	}
-	return count, nil
 }
 
 func (c *ChannelSource[T]) Pause(ctx context.Context) error {
@@ -166,6 +204,16 @@ func (c *ChannelSource[T]) Pause(ctx context.Context) error {
 
 func (c *ChannelSource[T]) resetFeedback() {
 	c.pendingData = false
+}
+
+// closeFeedback safely closes the feedback channel once.  Multiple code paths
+// can detect a closed pipe (ReadSlice, WaitOnEvent, PumpTick), so we guard
+// against double-close.
+func (c *ChannelSource[T]) closeFeedback() {
+	if c.feedback != nil && !c.feedbackClosed {
+		c.feedbackClosed = true
+		close(c.feedback)
+	}
 }
 
 // notifyFeedback notifies the listening feedback channel we are ready for more data but only once per successful read.

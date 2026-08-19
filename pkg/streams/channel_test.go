@@ -3,10 +3,11 @@ package streams
 import (
 	"context"
 	"errors"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestChannelConnection(t *testing.T) {
@@ -48,7 +49,9 @@ func TestChannelConnection(t *testing.T) {
 
 				// Trigger origin to write [4,5,6] to channel.
 				// Resume returns Full when the 3rd write fills the channel; that's expected.
-				_ = origin.Resume(scope)
+				resumeErr := origin.Resume(scope)
+				assert.True(t, errors.Is(resumeErr, nil) || errors.Is(resumeErr, Full),
+					"origin.Resume should return nil or Full, got %v", resumeErr)
 
 				// Pump second batch
 				err = port.Output.Resume(scope)

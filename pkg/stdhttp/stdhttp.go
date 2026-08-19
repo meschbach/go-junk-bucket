@@ -4,10 +4,11 @@ package stdhttp
 import (
 	"context"
 	"encoding/json"
-	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
 	"io"
 	"net/http"
+
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // RespondString responds on the given response with the status code and text body.  If an error occurs while responding

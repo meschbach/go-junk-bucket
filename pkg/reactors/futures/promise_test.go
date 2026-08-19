@@ -2,10 +2,11 @@ package futures
 
 import (
 	"context"
+	"testing"
+
 	"github.com/meschbach/go-junk-bucket/pkg/reactors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 type tickedExampleState struct {

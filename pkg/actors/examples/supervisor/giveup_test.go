@@ -3,11 +3,12 @@ package supervisor
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/meschbach/go-junk-bucket/pkg/actors/local"
 	"github.com/meschbach/go-junk-bucket/pkg/actors/supervisor"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestGivesUp(t *testing.T) {
