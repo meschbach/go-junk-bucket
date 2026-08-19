@@ -10,8 +10,7 @@ import (
 
 func TestChannelSinkFinishPropagation(t *testing.T) {
 	t.Run("Given a ChannelSink Finish connected to a Buffer", func(t *testing.T) {
-		scope, scopeDone := context.WithCancel(context.Background())
-		t.Cleanup(scopeDone)
+		scope := t.Context()
 
 		port := NewChannelPort[int](32)
 		outputBuffer := NewBuffer[int](32)
@@ -44,8 +43,7 @@ func TestChannelSinkFinishPropagation(t *testing.T) {
 	})
 
 	t.Run("Given values pumped into a Buffer through a ChannelPort", func(t *testing.T) {
-		scope, scopeDone := context.WithCancel(context.Background())
-		t.Cleanup(scopeDone)
+		scope := t.Context()
 
 		port := NewChannelPort[int](32)
 		outputBuffer := NewBuffer[int](32)
@@ -87,8 +85,7 @@ func TestChannelSinkFinishPropagation(t *testing.T) {
 	})
 
 	t.Run("Given values sitting in the Go channel when Finish is called", func(t *testing.T) {
-		scope, scopeDone := context.WithCancel(context.Background())
-		t.Cleanup(scopeDone)
+		scope := t.Context()
 
 		port := NewChannelPort[int](32)
 		outputBuffer := NewBuffer[int](32)
@@ -132,8 +129,7 @@ func TestChannelSink(t *testing.T) {
 	})
 
 	t.Run("Given a channel sink with a custom consumer", func(t *testing.T) {
-		scope, scopeDone := context.WithCancel(context.Background())
-		t.Cleanup(scopeDone)
+		scope := t.Context()
 
 		pipe := make(chan int, 3)
 		sink := NewChannelSink[int](pipe)
@@ -183,8 +179,7 @@ func TestChannelSink(t *testing.T) {
 	})
 
 	t.Run("When writing after Finish", func(t *testing.T) {
-		scope, scopeDone := context.WithCancel(context.Background())
-		t.Cleanup(scopeDone)
+		scope := t.Context()
 
 		pipe := make(chan int, 3)
 		sink := NewChannelSink[int](pipe)
@@ -196,8 +191,7 @@ func TestChannelSink(t *testing.T) {
 	})
 
 	t.Run("When Finish is called twice", func(t *testing.T) {
-		scope, scopeDone := context.WithCancel(context.Background())
-		t.Cleanup(scopeDone)
+		scope := t.Context()
 
 		pipe := make(chan int, 3)
 		sink := NewChannelSink[int](pipe)

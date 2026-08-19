@@ -13,7 +13,7 @@ import (
 func TestCrossTaskPromise(t *testing.T) {
 	//Following test case allows for deterministic validation of correctness and proper flow order.
 	t.Run("Given two tick reactors", func(t *testing.T) {
-		timedTestContext, onTestDone := context.WithTimeout(context.Background(), 1*time.Second)
+		timedTestContext, onTestDone := context.WithTimeout(t.Context(), 1*time.Second)
 		t.Cleanup(onTestDone)
 
 		type aState struct {

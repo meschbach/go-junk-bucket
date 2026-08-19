@@ -22,7 +22,7 @@ func TestTickedReactor(t *testing.T) {
 		r := &Ticked[*exampleState]{}
 		state := &exampleState{atomic: 0}
 		t.Run("Then the rector states so", func(t *testing.T) {
-			hasMore, err := r.Tick(context.Background(), 10, state)
+			hasMore, err := r.Tick(t.Context(), 10, state)
 			require.NoError(t, err)
 			assert.False(t, hasMore)
 		})
@@ -30,12 +30,12 @@ func TestTickedReactor(t *testing.T) {
 		t.Run("When an event is scheduled and ran", func(t *testing.T) {
 			tickCalled := false
 			var calledWithContext context.Context
-			r.ScheduleFunc(context.Background(), func(ctx context.Context) error {
+			r.ScheduleFunc(t.Context(), func(ctx context.Context) error {
 				calledWithContext = ctx
 				tickCalled = true
 				return nil
 			})
-			hasMore, err := r.Tick(context.Background(), 10, state)
+			hasMore, err := r.Tick(t.Context(), 10, state)
 			require.NoError(t, err)
 			assert.False(t, hasMore)
 

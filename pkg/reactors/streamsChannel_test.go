@@ -12,7 +12,7 @@ import (
 )
 
 func TestStreamFromTickToChannel(t *testing.T) {
-	testContext, done := context.WithTimeout(context.Background(), 1*time.Second)
+	testContext, done := context.WithTimeout(t.Context(), 1*time.Second)
 	t.Cleanup(done)
 
 	sourceReactor := RunChannelActor[int](testContext, 0)

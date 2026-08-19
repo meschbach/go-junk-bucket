@@ -14,7 +14,7 @@ type tickedExampleState struct {
 
 func TestFutureResolutionWithTicked(t *testing.T) {
 	t.Run("Given two reactors", func(t *testing.T) {
-		ctx := context.Background()
+		ctx := t.Context()
 		initReactor := &reactors.Ticked[*tickedExampleState]{}
 		secondReactor := &reactors.Ticked[*tickedExampleState]{}
 
@@ -56,8 +56,7 @@ func TestFutureResolutionWithTicked(t *testing.T) {
 
 func TestFutureResolutionWithChannelsAndTicked(t *testing.T) {
 	t.Run("Given two reactors", func(t *testing.T) {
-		ctx, done := context.WithCancel(context.Background())
-		t.Cleanup(done)
+		ctx := t.Context()
 		initReactor := &reactors.Ticked[*tickedExampleState]{}
 		secondReactor, input := reactors.NewChannel[*tickedExampleState](10)
 		go func() {

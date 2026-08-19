@@ -20,7 +20,7 @@ func TestChannelReactor(t *testing.T) {
 
 		t.Run("When a unit is scheduled", func(t *testing.T) {
 			called := false
-			reactor.ScheduleFunc(context.Background(), func(ctx context.Context) error {
+			reactor.ScheduleFunc(t.Context(), func(ctx context.Context) error {
 				called = true
 				return nil
 			})
@@ -31,7 +31,7 @@ func TestChannelReactor(t *testing.T) {
 
 			t.Run("And it is received from the queue and run", func(t *testing.T) {
 				op := <-queue
-				err := reactor.Tick(context.Background(), op, 0)
+				err := reactor.Tick(t.Context(), op, 0)
 				require.NoError(t, err)
 
 				t.Run("Then the unit of work is executed", func(t *testing.T) {
@@ -46,11 +46,11 @@ func TestChannelReactor(t *testing.T) {
 
 		t.Run("When requested to consume all", func(t *testing.T) {
 			var invokingContext context.Context
-			reactor.ScheduleFunc(context.Background(), func(ctx context.Context) error {
+			reactor.ScheduleFunc(t.Context(), func(ctx context.Context) error {
 				invokingContext = ctx
 				return nil
 			})
-			count, err := reactor.ConsumeAll(context.Background(), 0)
+			count, err := reactor.ConsumeAll(t.Context(), 0)
 			assert.Equal(t, 1, count)
 			assert.NoError(t, err)
 

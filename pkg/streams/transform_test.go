@@ -28,7 +28,7 @@ func TestTransform(t *testing.T) {
 			transformer := NewTransform[FromType, ToType](func(ctx context.Context, input FromType) (output ToType, err error) {
 				return ToType(input * 2), nil
 			})
-			require.ErrorIs(t, transformer.Pump(context.Background(), source, out), End)
+			require.ErrorIs(t, transformer.Pump(t.Context(), source, out), End)
 
 			t.Run("Then the accumulator has correct results", func(t *testing.T) {
 				assert.Equal(t, []ToType{0, 2, 2, 4, 6, 10, 16}, out.Output)

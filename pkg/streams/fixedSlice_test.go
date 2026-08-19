@@ -1,7 +1,6 @@
 package streams
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,7 +13,7 @@ func TestFixedSlice(t *testing.T) {
 
 		t.Run("When reading with a smaller buffer", func(t *testing.T) {
 			target := make([]int, 4)
-			count, err := f.ReadSlice(context.Background(), target)
+			count, err := f.ReadSlice(t.Context(), target)
 			require.NoError(t, err)
 			assert.Equal(t, 4, count)
 
@@ -24,7 +23,7 @@ func TestFixedSlice(t *testing.T) {
 
 			t.Run("And the buffer is read beyond the end", func(t *testing.T) {
 				target := make([]int, 4)
-				count, err := f.ReadSlice(context.Background(), target)
+				count, err := f.ReadSlice(t.Context(), target)
 				t.Run("Then is returns the short read state", func(t *testing.T) {
 					assert.NoError(t, err)
 					assert.Equal(t, 3, count)

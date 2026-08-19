@@ -65,7 +65,6 @@ func StreamBetween[E any, I any, O any](ctx context.Context, inputSide Boundary[
 
 	//todo: feedback mechanism should be pluggable so we can avoid an extra goroutine
 	go func() {
-		ctx := context.Background()
 		for event := range port.Feedback {
 			eventCopy := event
 			inputSide.ScheduleFunc(ctx, func(parent context.Context) error {

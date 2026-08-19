@@ -13,7 +13,7 @@ import (
 
 func TestStreamFinishEndToEnd(t *testing.T) {
 	t.Run("Given a StreamBetween bridging a Channel source to a Ticked output with a connected Buffer", func(t *testing.T) {
-		testContext, done := context.WithTimeout(context.Background(), 1*time.Second)
+		testContext, done := context.WithTimeout(t.Context(), 1*time.Second)
 		t.Cleanup(done)
 
 		sourceReactor := RunChannelActor[int](testContext, 0)
@@ -51,7 +51,7 @@ func TestStreamFinishEndToEnd(t *testing.T) {
 	})
 
 	t.Run("Given a StreamBetween with values flowing before Finish", func(t *testing.T) {
-		testContext, done := context.WithTimeout(context.Background(), 1*time.Second)
+		testContext, done := context.WithTimeout(t.Context(), 1*time.Second)
 		t.Cleanup(done)
 
 		sourceReactor := RunChannelActor[int](testContext, 0)
@@ -108,7 +108,7 @@ func TestStreamFinishEndToEnd(t *testing.T) {
 
 func TestStreamThroughBoundary(t *testing.T) {
 	t.Run("Given two tick boundaries and a created stream", func(t *testing.T) {
-		timedTestContext, onTestDone := context.WithTimeout(context.Background(), 1*time.Second)
+		timedTestContext, onTestDone := context.WithTimeout(t.Context(), 1*time.Second)
 		t.Cleanup(onTestDone)
 
 		type sourceState struct{}

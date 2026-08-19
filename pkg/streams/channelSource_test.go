@@ -1,7 +1,6 @@
 package streams
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,8 +13,7 @@ func TestChannelSource(t *testing.T) {
 	})
 
 	t.Run("Given a channel source", func(t *testing.T) {
-		scope, scopeDone := context.WithCancel(context.Background())
-		t.Cleanup(scopeDone)
+		scope := t.Context()
 		pipe := make(chan int, 3)
 		src := NewChannelSource(pipe)
 

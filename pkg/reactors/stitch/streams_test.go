@@ -24,7 +24,7 @@ func TestStreamBetween(t *testing.T) {
 
 		s := suture.NewSimple("real")
 		s.Add(originReactor)
-		runnerContext, closeProcessors := context.WithCancel(context.Background())
+		runnerContext, closeProcessors := context.WithCancel(t.Context())
 		go func() {
 			err := s.Serve(runnerContext)
 			if !errors.Is(err, context.Canceled) {
@@ -35,17 +35,17 @@ func TestStreamBetween(t *testing.T) {
 			closeProcessors()
 		})
 
-		source, sink, err := reactors.StreamBetween[int](context.Background(), originProcessor, appropriated)
+		source, sink, err := reactors.StreamBetween[int](t.Context(), originProcessor, appropriated)
 		require.NoError(t, err)
 
 		t.Run("When values are written from the origin reactor", func(t *testing.T) {
 			exampleValue := 2020
-			originProcessor.ScheduleFunc(context.Background(), func(ctx context.Context) error {
+			originProcessor.ScheduleFunc(t.Context(), func(ctx context.Context) error {
 				return sink.Write(ctx, exampleValue)
 			})
 
 			t.Run("Then the value is produced in the target well", func(t *testing.T) {
-				timed, done := context.WithTimeout(context.Background(), 1*time.Second)
+				timed, done := context.WithTimeout(t.Context(), 1*time.Second)
 				t.Cleanup(done)
 
 				count := 0

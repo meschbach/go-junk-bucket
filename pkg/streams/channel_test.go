@@ -16,7 +16,7 @@ func TestChannelConnection(t *testing.T) {
 		target := NewBuffer[int](3, WithBufferTracePrefix[int]("target"))
 		port := NewChannelPort[int](3)
 
-		scope, scopeDone := context.WithTimeout(context.Background(), 1*time.Second)
+		scope, scopeDone := context.WithTimeout(t.Context(), 1*time.Second)
 		t.Cleanup(scopeDone)
 		_, err := Connect[int](scope, origin, port.Input)
 		require.NoError(t, err)

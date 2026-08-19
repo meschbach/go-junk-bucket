@@ -18,7 +18,7 @@ func TestSubmitStitchInteraction(t *testing.T) {
 	t.Run("Given an autonomous stitch unit and an appropriated unit", func(t *testing.T) {
 		t.Parallel()
 
-		timedTestContext, onTestDone := context.WithTimeout(context.Background(), 1*time.Second)
+		timedTestContext, onTestDone := context.WithTimeout(t.Context(), 1*time.Second)
 		t.Cleanup(onTestDone)
 
 		type appropriatedState struct{}
@@ -35,7 +35,7 @@ func TestSubmitStitchInteraction(t *testing.T) {
 
 		s := suture.NewSimple("real")
 		s.Add(realProcessorReactor)
-		runnerContext, closeProcessors := context.WithCancel(context.Background())
+		runnerContext, closeProcessors := context.WithCancel(t.Context())
 		go func() {
 			err := s.Serve(runnerContext)
 			if !errors.Is(err, context.Canceled) {

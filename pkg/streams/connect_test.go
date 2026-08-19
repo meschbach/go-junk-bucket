@@ -11,7 +11,7 @@ import (
 
 func TestConnect(t *testing.T) {
 	t.Run("Given two connected streams with elements passed", func(t *testing.T) {
-		ctx, done := context.WithTimeout(context.Background(), 1*time.Second)
+		ctx, done := context.WithTimeout(t.Context(), 1*time.Second)
 		t.Cleanup(done)
 
 		inputBuffer := NewBuffer[int](8, WithBufferTracePrefix[int]("input"))
@@ -73,7 +73,7 @@ func TestConnect(t *testing.T) {
 	})
 
 	t.Run("ConnectedPipe wiring", func(t *testing.T) {
-		ctx, done := context.WithTimeout(context.Background(), 1*time.Second)
+		ctx, done := context.WithTimeout(t.Context(), 1*time.Second)
 		t.Cleanup(done)
 
 		t.Run("End handler propagates to Buffer", func(t *testing.T) {

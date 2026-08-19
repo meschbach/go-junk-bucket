@@ -11,7 +11,7 @@ import (
 
 func TestAsyncWork(t *testing.T) {
 	t.Run("Given two reactors", func(t *testing.T) {
-		ctx, done := context.WithCancel(context.Background())
+		ctx, done := context.WithCancel(t.Context())
 		t.Cleanup(done)
 		reactorA := &Ticked[int]{}
 		reactorB := RunChannelActor(ctx, 42)

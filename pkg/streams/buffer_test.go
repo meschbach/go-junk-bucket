@@ -1,7 +1,6 @@
 package streams
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,15 +16,13 @@ func TestBufferStream(t *testing.T) {
 
 	t.Run("Given an empty Buffer with a limit of 3", func(t *testing.T) {
 		t.Parallel()
-		ctx, done := context.WithCancel(context.Background())
-		t.Cleanup(done)
-
 		s := NewBuffer[int](3)
 
 		t.Run("When Finish is called on an empty buffer", func(t *testing.T) {
-			require.NoError(t, s.Finish(ctx))
+			require.NoError(t, s.Finish(t.Context()))
 
 			t.Run("Then ReadSlice returns End", func(t *testing.T) {
+				ctx := t.Context()
 				readOut := make([]int, 3)
 				count, err := s.ReadSlice(ctx, readOut)
 				assert.Equal(t, 0, count, "no elements should be read from an empty finished buffer")
@@ -35,8 +32,7 @@ func TestBufferStream(t *testing.T) {
 	})
 
 	t.Run("Given a Buffer finishing with empty Output", func(t *testing.T) {
-		ctx, done := context.WithCancel(context.Background())
-		t.Cleanup(done)
+		ctx := t.Context()
 
 		s := NewBuffer[int](3)
 
@@ -56,8 +52,7 @@ func TestBufferStream(t *testing.T) {
 	})
 
 	t.Run("Given a Buffer connected to a ChannelSource via ConnectedPipe", func(t *testing.T) {
-		ctx, done := context.WithCancel(context.Background())
-		t.Cleanup(done)
+		ctx := t.Context()
 
 		t.Run("ReadSlice fires Drained and Finish chain causes ReadSlice to return End", func(t *testing.T) {
 			port := NewChannelPort[int](32)
@@ -77,9 +72,7 @@ func TestBufferStream(t *testing.T) {
 
 	t.Run("Given a Buffer with a limit of 3", func(t *testing.T) {
 		t.Parallel()
-		ctx, done := context.WithCancel(context.Background())
-		t.Cleanup(done)
-
+		ctx := t.Context()
 		bufferSize := 3
 		s := NewBuffer[int](bufferSize)
 		sinkEvents := AttachSinkVerifier[int](s)

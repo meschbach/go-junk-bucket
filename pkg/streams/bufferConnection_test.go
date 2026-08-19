@@ -12,7 +12,7 @@ import (
 // Tests Buffer to Buffer semantics with the Connect family of controls.
 func TestBufferConnection(t *testing.T) {
 	t.Run("Given a source stream with existing elements connecting to an output buffer", func(t *testing.T) {
-		ctx, done := context.WithTimeout(context.Background(), 1*time.Second)
+		ctx, done := context.WithTimeout(t.Context(), 1*time.Second)
 		t.Cleanup(done)
 
 		examples := []int{1941, 1942, 1943, 1944, 1945}
